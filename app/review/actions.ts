@@ -8,6 +8,13 @@ type CardType = "word" | "kanji" | "kana";
 // Grade a card: run ts-fsrs, update card_state (setting introduced_at on first
 // review), and append to review_log. This is the ONLY place SRS state mutates.
 export async function gradeCard(cardType: CardType, cardId: number, grade: Grade, elapsedMs: number) {
+  // Runtime input validation: this is a public unauthenticated server action and
+  // TS types are erased at runtime, so callers can pass anything.
+  if (cardType !== "word" && cardType !== "kanji" && cardType !== "kana") return { ok: false as const };
+  if (grade !== 1 && grade !== 2 && grade !== 3 && grade !== 4) return { ok: false as const };
+  if (!Number.isInteger(cardId) || cardId < 0) return { ok: false as const };
+  if (!Number.isFinite(elapsedMs) || elapsedMs < 0 || elapsedMs > 86_400_000) elapsedMs = 0;
+
   const db = getDb();
   const row = db
     .prepare("SELECT fsrs_card, introduced_at FROM card_state WHERE card_type = ? AND card_id = ?")

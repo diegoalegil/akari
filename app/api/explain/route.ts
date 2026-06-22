@@ -29,7 +29,25 @@ export async function POST(req: Request) {
     return new Response("NO_KEY", { status: 503 });
   }
 
+  // Same-origin guard: this endpoint bills the user's own key, so reject
+  // cross-origin callers before reaching Anthropic.
+  const origin = req.headers.get("origin");
+  if (origin) {
+    try {
+      if (new URL(origin).host !== req.headers.get("host")) return new Response("forbidden", { status: 403 });
+    } catch {
+      return new Response("bad request", { status: 400 });
+    }
+  }
+
   const { context, history }: Body = await req.json().catch(() => ({}));
+
+  // Clamp input size: cap turns and total characters to avoid abusive payloads.
+  if (history) {
+    if (history.length > 20) return new Response("demasiados mensajes", { status: 413 });
+    const totalChars = history.reduce((n, m) => n + (m.text?.length ?? 0), 0);
+    if (totalChars > 8000) return new Response("mensaje demasiado largo", { status: 413 });
+  }
   const ctx = context
     ? `Contexto de la tarjeta (datos validados, no los contradigas):
 - Expresión: ${context.expression ?? "—"}
