@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
+import { seeded } from "@/lib/queries";
 
 export const dynamic = "force-dynamic";
 
 // Download the user's SRS progress (history + card state) as JSON.
 export async function GET() {
   const db = getDb();
+  if (!seeded(db)) return new NextResponse("Aún no hay datos. Ejecuta `npm run seed`.", { status: 503 });
   const data = {
     app: "akari",
     exported_at: new Date().toISOString(),

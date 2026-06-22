@@ -1,5 +1,6 @@
 "use server";
 import { getDb } from "@/lib/db";
+import { seeded } from "@/lib/queries";
 
 export type SearchResults = {
   words: { expression: string; reading: string; meaning: string }[];
@@ -8,8 +9,8 @@ export type SearchResults = {
 
 export async function searchAll(query: string): Promise<SearchResults> {
   const q = query.trim();
-  if (!q) return { words: [], kanji: [] };
   const db = getDb();
+  if (!q || !seeded(db)) return { words: [], kanji: [] };
   const like = `%${q}%`;
 
   const words = (
@@ -26,8 +27,8 @@ export async function searchAll(query: string): Promise<SearchResults> {
     db
       .prepare(
         `SELECT literal, COALESCE(meanings_es, meanings) m FROM kanji
-         WHERE id IN (SELECT kanji_id FROM word_kanji) AND (literal = ? OR meanings LIKE ? OR meanings_es LIKE ?)
-         LIMIT 24`,
+         WHERE literal = ? OR meanings LIKE ? OR meanings_es LIKE ?
+         ORDER BY (frequency IS NULL), frequency ASC LIMIT 24`,
       )
       .all(q, like, like) as { literal: string; m: string }[]
   ).map((k) => ({ literal: k.literal, meaning: (JSON.parse(k.m || "[]") as string[])[0] ?? "" }));

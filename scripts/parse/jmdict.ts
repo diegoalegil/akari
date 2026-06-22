@@ -14,7 +14,6 @@ type RawJmdict = { words: RawWord[] };
 export type JmEntry = {
   id: string;
   meaning: string;
-  frequency: number | null; // lower = more frequent (from nfXX), null if absent
   common: boolean;
 };
 
@@ -23,9 +22,21 @@ export type JmdictIndex = {
   size: number;
 };
 
-/** Assemble a concise English gloss from up to 4 senses. */
-function buildMeaning(w: RawWord): string {
-  const senses = w.sense.slice(0, 4).map((s) =>
+const SEP = "\t"; // never appears in a Japanese expression/reading
+
+/** Does a sense apply to this specific (kanji,kana) surface form? */
+function senseApplies(s: Sense, kanjiText: string | null, kanaText: string): boolean {
+  const okKanji =
+    !kanjiText || !s.appliesToKanji || s.appliesToKanji.length === 0 || s.appliesToKanji.includes("*") || s.appliesToKanji.includes(kanjiText);
+  const okKana = !s.appliesToKana || s.appliesToKana.length === 0 || s.appliesToKana.includes("*") || s.appliesToKana.includes(kanaText);
+  return okKanji && okKana;
+}
+
+/** Concise English gloss from the senses that apply to THIS surface form
+ *  (restriction-aware so multi-form entries don't bleed unrelated senses). */
+function buildMeaning(w: RawWord, kanjiText: string | null, kanaText: string): string {
+  const applicable = w.sense.filter((s) => senseApplies(s, kanjiText, kanaText));
+  const senses = (applicable.length ? applicable : w.sense).slice(0, 4).map((s) =>
     s.gloss
       .filter((g) => g.lang === "eng" || !g.lang)
       .map((g) => g.text)
@@ -34,36 +45,20 @@ function buildMeaning(w: RawWord): string {
   return senses.filter(Boolean).join("; ");
 }
 
-/** Smallest nfXX rank across a set of forms (the JMdict frequency signal). */
-function freqOf(forms: Form[]): number | null {
-  let best: number | null = null;
-  for (const f of forms) {
-    for (const t of f.tags ?? []) {
-      const m = /^nf(\d+)$/.exec(t);
-      if (m) {
-        const n = Number(m[1]);
-        if (best === null || n < best) best = n;
-      }
-    }
-  }
-  return best;
-}
-
 export async function parseJmdict(jsonPath: string): Promise<JmdictIndex> {
   const data = await readJsonFile<RawJmdict>(jsonPath);
-  const SEP = "";
   const pairIndex = new Map<string, JmEntry>();
   const kanaIndex = new Map<string, JmEntry>();
 
   for (const w of data.words) {
-    const meaning = buildMeaning(w);
-    if (!meaning) continue;
     const common = w.kanji.some((k) => k.common) || w.kana.some((k) => k.common);
-    const entry: JmEntry = { id: w.id, meaning, frequency: freqOf([...w.kanji, ...w.kana]), common };
 
     if (w.kanji.length === 0) {
       // Pure kana word: index by reading. Prefer a common entry on collision.
       for (const k of w.kana) {
+        const meaning = buildMeaning(w, null, k.text);
+        if (!meaning) continue;
+        const entry: JmEntry = { id: w.id, meaning, common };
         const prev = kanaIndex.get(k.text);
         if (!prev || (entry.common && !prev.common)) kanaIndex.set(k.text, entry);
       }
@@ -71,10 +66,11 @@ export async function parseJmdict(jsonPath: string): Promise<JmdictIndex> {
     }
 
     for (const kana of w.kana) {
-      const applies = kana.appliesToKanji && !kana.appliesToKanji.includes("*")
-        ? kana.appliesToKanji
-        : w.kanji.map((k) => k.text);
+      const applies = kana.appliesToKanji && !kana.appliesToKanji.includes("*") ? kana.appliesToKanji : w.kanji.map((k) => k.text);
       for (const kanjiText of applies) {
+        const meaning = buildMeaning(w, kanjiText, kana.text);
+        if (!meaning) continue;
+        const entry: JmEntry = { id: w.id, meaning, common };
         const key = kanjiText + SEP + kana.text;
         const prev = pairIndex.get(key);
         if (!prev || (entry.common && !prev.common)) pairIndex.set(key, entry);

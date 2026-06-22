@@ -11,17 +11,7 @@ export function KanjiStrokes({ strokes, size = 300 }: { strokes: string[]; size?
   const numRefs = useRef<(SVGTextElement | null)[]>([]);
   const [playing, setPlaying] = useState(false);
   const [nums, setNums] = useState<{ x: number; y: number }[]>([]);
-
-  // Stroke-start points for the numbers (needs the paths in the DOM).
-  useEffect(() => {
-    setNums(
-      pathRefs.current.map((el) => {
-        if (!el) return { x: 0, y: 0 };
-        const p = el.getPointAtLength(0);
-        return { x: p.x, y: p.y };
-      }),
-    );
-  }, [strokes]);
+  const didAutoPlay = useRef(false);
 
   const play = useCallback(() => {
     if (reduce || playing) return;
@@ -47,11 +37,25 @@ export function KanjiStrokes({ strokes, size = 300 }: { strokes: string[]; size?
     window.setTimeout(() => setPlaying(false), delay);
   }, [reduce, playing]);
 
-  // Auto-draw once on mount.
+  // First compute the stroke-start points (so the number <text> nodes commit),
+  // THEN auto-draw — otherwise the numbers are skipped on the first draw.
   useEffect(() => {
-    if (!reduce) play();
+    if (!nums.length && pathRefs.current.length) {
+      setNums(
+        pathRefs.current.map((el) => {
+          if (!el) return { x: 0, y: 0 };
+          const p = el.getPointAtLength(0);
+          return { x: p.x, y: p.y };
+        }),
+      );
+      return;
+    }
+    if (nums.length && !didAutoPlay.current && !reduce) {
+      didAutoPlay.current = true;
+      play();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [nums, reduce]);
 
   return (
     <div className="flex flex-col items-center gap-3">

@@ -17,10 +17,16 @@ export function SearchClient() {
       setRes({ words: [], kanji: [] });
       return;
     }
+    let active = true;
     const t = setTimeout(() => {
-      void searchAll(q).then(setRes);
+      void searchAll(q).then((r) => {
+        if (active) setRes(r); // ignore stale out-of-order responses
+      });
     }, 180);
-    return () => clearTimeout(t);
+    return () => {
+      active = false;
+      clearTimeout(t);
+    };
   }, [q]);
 
   return (

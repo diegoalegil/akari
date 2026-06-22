@@ -56,7 +56,7 @@ export function Settings({ initial }: { initial: AppSettings }) {
   const setStr = <K extends keyof AppSettings>(k: K, key: string, v: string) => { setS((p) => ({ ...p, [k]: v })); save(key, v); };
   const setBool = <K extends keyof AppSettings>(k: K, key: string, v: boolean) => { setS((p) => ({ ...p, [k]: v })); save(key, v ? "1" : "0"); };
 
-  const themes: [string, string][] = [["dark", "Oscuro"], ["indigo", "Noche-índigo"], ["system", "Sistema"]];
+  const themes: [string, string][] = [["dark", "Oscuro"], ["indigo", "Noche-índigo"]];
 
   return (
     <div className="grid gap-8 md:grid-cols-[1fr_280px]">
@@ -82,10 +82,10 @@ export function Settings({ initial }: { initial: AppSettings }) {
           <h2 className="mb-2 text-[10px] uppercase tracking-wider text-[var(--color-fg-faint)]">Apariencia</h2>
           <div className="surface p-5">
             <div className="mb-3 text-[var(--color-fg)]">Tema</div>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {themes.map(([v, l]) => (
                 <button key={v} onClick={() => setStr("theme", "theme", v)} className={`rounded-xl border p-3 text-center transition-colors ${s.theme === v ? "border-[var(--color-indigo)] ring-1 ring-[color-mix(in_oklab,var(--color-indigo)_30%,transparent)]" : "border-[var(--color-line)]"}`}>
-                  <div className="mb-2 h-9 w-full rounded-md" style={{ background: v === "system" ? "linear-gradient(120deg,var(--color-surface) 50%,#e8e6e0 50%)" : v === "indigo" ? "linear-gradient(180deg,#1a1d2e,#0e0f13)" : "linear-gradient(180deg,var(--color-surface),var(--color-ink))" }}>
+                  <div className="mb-2 h-9 w-full rounded-md" style={{ background: v === "indigo" ? "linear-gradient(180deg,#1a1d2e,#0e0f13)" : "linear-gradient(180deg,var(--color-surface),var(--color-ink))" }}>
                     <span className="block h-2 w-2 translate-x-2 translate-y-2 rounded-full" style={{ background: v === "indigo" ? "var(--color-indigo)" : "var(--color-ember)" }} />
                   </div>
                   <span className="text-xs text-[var(--color-fg-muted)]">{l}</span>
@@ -96,7 +96,6 @@ export function Settings({ initial }: { initial: AppSettings }) {
         </section>
 
         <Section title="Audio y movimiento">
-          <Row title="Sonido" desc="Un mazo suave sobre madera cálida"><Toggle on={s.sound} onChange={(v) => setBool("sound", "sound", v)} /></Row>
           <Row title="Reproducir al revelar" desc="Audio nativo tras el giro"><Toggle on={s.autoplay} onChange={(v) => setBool("autoplay", "autoplay", v)} /></Row>
           <Row title="Movimiento reducido" desc="Conserva el brillo, calma el resto"><Toggle on={s.reducedMotion} onChange={(v) => setBool("reducedMotion", "reduced_motion", v)} /></Row>
         </Section>

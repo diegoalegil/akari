@@ -91,7 +91,7 @@ export async function buildDb(manifest: Manifest): Promise<Record<string, number
       reading: n.reading,
       meaning: m?.meaning || n.meaning,
       meaningSource: m ? "jmdict" : "kaishi",
-      frequency: m?.frequency ?? n.frequency,
+      frequency: n.frequency, // JMdict-simplified has no per-word frequency; Kaishi's rank is the signal
       jlpt: jlptIndex.lookup(n.expression, n.reading),
       audio: n.wordAudio,
     };
@@ -157,18 +157,30 @@ export async function buildDb(manifest: Manifest): Promise<Record<string, number
   const sentences: SentenceRow[] = [];
   const wordSentences: { word: number; sentence: number; rank: number }[] = [];
   const sentenceAudio: { sentence: number; file: string; license: string | null; attribution: string | null }[] = [];
-  const tatoebaPick: { sentenceRowId: number; jpId: number }[] = []; // for optional audio fetch
+  const tatoebaPick: { sentenceRowId: number; jpId: number }[] = []; // for English backfill + optional audio
   const neededEng = new Set<number>();
-  const tatBySentence = new Map<number, number>(); // jpId -> chosen engId
+  const tatEngIds = new Map<number, number[]>(); // jpId -> candidate English ids
+  const sentenceByKey = new Map<string, number>(); // dedupe by (source + jp) -> id
   let sid = 0;
+
+  // Reuse a sentence row when the same text recurs across words; returns whether new.
+  const ensureSentence = (jp: string, en: string | null, source: "tatoeba" | "kaishi") => {
+    const key = source + "" + jp;
+    const existing = sentenceByKey.get(key);
+    if (existing != null) return { id: existing, created: false };
+    const id = ++sid;
+    sentences.push({ id, jp, en, source });
+    sentenceByKey.set(key, id);
+    return { id, created: true };
+  };
 
   for (const w of words) {
     // Kaishi bundled sentence (always present, validated).
     if (w.expression && notes[w.order - 1].sentenceJp) {
       const n = notes[w.order - 1];
-      sentences.push({ id: ++sid, jp: n.sentenceJp, en: n.sentenceEn || null, source: "kaishi" });
-      wordSentences.push({ word: w.id, sentence: sid, rank: 0 });
-      if (n.sentenceAudio) sentenceAudio.push({ sentence: sid, file: n.sentenceAudio, license: null, attribution: null });
+      const { id, created } = ensureSentence(n.sentenceJp, n.sentenceEn || null, "kaishi");
+      wordSentences.push({ word: w.id, sentence: id, rank: 0 });
+      if (created && n.sentenceAudio) sentenceAudio.push({ sentence: id, file: n.sentenceAudio, license: null, attribution: null });
     }
 
     // Tatoeba candidates containing the expression, with an English translation.
@@ -183,23 +195,22 @@ export async function buildDb(manifest: Manifest): Promise<Record<string, number
       return au || tat.jpById.get(a)!.length - tat.jpById.get(b)!.length;
     });
     matches.slice(0, MAX_TATOEBA_PER_WORD).forEach((jpId, i) => {
-      const engId = tat.jpToEng.get(jpId)![0];
-      neededEng.add(engId);
-      tatBySentence.set(jpId, engId);
-      sentences.push({ id: ++sid, jp: tat.jpById.get(jpId)!, en: null, source: "tatoeba" });
-      wordSentences.push({ word: w.id, sentence: sid, rank: i + 1 });
-      tatoebaPick.push({ sentenceRowId: sid, jpId });
+      const engIds = tat.jpToEng.get(jpId)!;
+      engIds.forEach((e) => neededEng.add(e)); // request ALL candidates; some ids may be deleted
+      tatEngIds.set(jpId, engIds);
+      const { id, created } = ensureSentence(tat.jpById.get(jpId)!, null, "tatoeba");
+      wordSentences.push({ word: w.id, sentence: id, rank: i + 1 });
+      if (created) tatoebaPick.push({ sentenceRowId: id, jpId });
     });
   }
 
   console.log(`Loading ${neededEng.size} English translations…`);
   const engText = await loadEngSubset(manifest.tatoeba.engSentences, neededEng);
-  // Backfill English on Tatoeba sentence rows.
+  // Backfill English: use the first candidate id that actually resolved.
   for (const pick of tatoebaPick) {
-    const engId = tatBySentence.get(pick.jpId);
-    const en = engId != null ? engText.get(engId) : undefined;
+    const resolved = (tatEngIds.get(pick.jpId) ?? []).map((e) => engText.get(e)).find((t) => t);
     const row = sentences[pick.sentenceRowId - 1];
-    if (row) row.en = en ?? null;
+    if (row) row.en = resolved ?? null;
   }
 
   // Optional: fetch Tatoeba native audio for CC-licensed picks.
@@ -211,10 +222,11 @@ export async function buildDb(manifest: Manifest): Promise<Record<string, number
   const now = new Date();
   type CardSeed = { type: "kana" | "word" | "kanji"; id: number };
   const kana = buildKana();
+  // Only kana + words get SRS cards (the two review surfaces). Kanji are
+  // studied through the vocabulary that contains them — no inert kanji cards.
   const cardSeeds: CardSeed[] = [
     ...kana.map((_, i) => ({ type: "kana" as const, id: i + 1 })),
     ...words.map((w) => ({ type: "word" as const, id: w.id })),
-    ...[...inVocab].map((lit) => ({ type: "kanji" as const, id: kanjiId.get(lit)! })),
   ];
 
   // ── Insert (one synchronous transaction) ────────────────────────────────────
@@ -297,7 +309,7 @@ async function fetchTatoebaAudio(
   let ok = 0;
   for (const p of picks) {
     const meta = tat.audio.get(p.jpId);
-    if (!meta || !/^CC BY/i.test(meta.license)) continue; // CC-licensed only
+    if (!meta || !/^CC BY(?!-NC)/i.test(meta.license)) continue; // CC-BY only (exclude NonCommercial)
     try {
       const res = await fetch(`https://audio.tatoeba.org/sentences/jpn/${p.jpId}.mp3`);
       if (!res.ok) continue;

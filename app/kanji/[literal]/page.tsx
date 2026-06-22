@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 // KANJIDIC2 stores the OLD 4-level JLPT scale; map approximately to the modern
 // N5–N1 for display. (Refined later via a dedicated JLPT dataset.)
-const JLPT_MAP: Record<number, string> = { 4: "N5", 3: "N4", 2: "N2", 1: "N1" };
+const JLPT_MAP: Record<number, string> = { 4: "N5", 3: "N4", 2: "N3", 1: "N2" };
 
 function Chip({ label, value }: { label: string; value: string }) {
   return (

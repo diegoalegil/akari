@@ -1,5 +1,6 @@
 import "server-only";
 import { getDb } from "./db";
+import { seeded } from "./queries";
 import { previewIntervals, type Intervals } from "./fsrs";
 
 export type KanaType = "hiragana" | "katakana";
@@ -20,6 +21,7 @@ type Row = Record<string, unknown>;
 /** The gojūon grid for one script, each cell tagged with its mastery state. */
 export function getKanaGrid(type: KanaType): KanaCell[] {
   const db = getDb();
+  if (!seeded(db)) return [];
   const now = Date.now();
   const rows = db
     .prepare(
@@ -60,6 +62,18 @@ export type KanaQueueItem = {
 /** Drill queue for one script: due reviews + new kana up to a session limit. */
 export function getKanaQueue(type: KanaType, limitNew = 20): KanaQueueItem[] {
   const db = getDb();
+  if (!seeded(db)) return [];
+  // Daily cap: don't keep introducing fresh kana every visit.
+  const introducedToday = (
+    db
+      .prepare(
+        `SELECT count(*) c FROM card_state cs JOIN kana k ON k.id = cs.card_id
+         WHERE cs.card_type='kana' AND k.type = ? AND cs.introduced_at IS NOT NULL
+           AND date(cs.introduced_at,'localtime') = date('now','localtime')`,
+      )
+      .get(type) as { c: number }
+  ).c;
+  const freshLimit = Math.max(0, limitNew - introducedToday);
   const due = db
     .prepare(
       `SELECT k.id id, k.char char, k.romaji romaji, cs.fsrs_card fc
@@ -76,7 +90,7 @@ export function getKanaQueue(type: KanaType, limitNew = 20): KanaQueueItem[] {
        WHERE cs.card_type='kana' AND k.type = ? AND cs.introduced_at IS NULL
        ORDER BY k.row, k.col LIMIT ?`,
     )
-    .all(type, limitNew) as Row[];
+    .all(type, freshLimit) as Row[];
 
   const now = new Date();
   return [...due.map((r) => ({ r, isNew: false })), ...fresh.map((r) => ({ r, isNew: true }))].map(({ r, isNew }) => ({

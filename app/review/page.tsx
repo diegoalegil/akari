@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Lantern } from "@/components/Lantern";
 import { ReviewSession } from "@/components/review/ReviewSession";
 import { getReviewQueue } from "@/lib/review";
+import { getSettings } from "@/lib/queries";
 
 export const metadata = { title: "Repaso" };
 export const dynamic = "force-dynamic";
@@ -29,5 +30,6 @@ export default function ReviewPage() {
     );
   }
 
-  return <ReviewSession cards={cards} />;
+  const { autoplay, cardAnim } = getSettings();
+  return <ReviewSession cards={cards} autoplay={autoplay} cardAnim={cardAnim} />;
 }

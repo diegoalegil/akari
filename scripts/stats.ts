@@ -46,7 +46,7 @@ export function printStats(): void {
   row("  ↳ words with ≥1 sentence", wWithSent, pct(wWithSent, words));
   row("  ↳ avg per word", (n(db, "SELECT count(*) c FROM word_sentences") / words).toFixed(2));
   row("sentence audio clips", sAudio);
-  row("card_state (FSRS)", cards, "kana + words + kanji");
+  row("card_state (FSRS)", cards, "kana + words");
   console.log("─".repeat(52));
   console.log("  datasets:");
   console.log(`    JMdict    ${meta.jmdict_version ?? "?"}`);

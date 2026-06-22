@@ -26,7 +26,6 @@ export function Lantern({
       fill="none"
       className={className}
       aria-hidden="true"
-      role="img"
     >
       <defs>
         <radialGradient id={glowId} cx="50%" cy="52%" r="50%">
@@ -69,20 +68,5 @@ export function Lantern({
         style={animated ? { animation: "flame-breathe 3s ease-in-out infinite", transformOrigin: "24px 26px" } : undefined}
       />
     </svg>
-  );
-}
-
-// Lantern + wordmark lock-up.
-export function Brand({ size = 28, className = "" }: { size?: number; className?: string }) {
-  return (
-    <span className={`inline-flex items-center gap-2 ${className}`}>
-      <Lantern size={size} />
-      <span className="font-semibold tracking-tight" style={{ fontSize: size * 0.62 }}>
-        Akari
-      </span>
-      <span className="font-jp text-[var(--color-fg-faint)]" style={{ fontSize: size * 0.5 }}>
-        灯
-      </span>
-    </span>
   );
 }

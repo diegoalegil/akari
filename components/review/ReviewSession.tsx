@@ -26,7 +26,7 @@ function Speaker({ src, label = "Reproducir audio", big = false }: { src: string
         const a = ref.current;
         if (a) {
           a.currentTime = 0;
-          void a.play();
+          a.play().catch(() => {});
         }
       }}
       className={`inline-grid place-items-center rounded-full border border-[var(--color-line-strong)] text-[var(--color-fg-muted)] transition-colors hover:border-[var(--color-ember)] hover:text-[var(--color-ember)] ${big ? "h-11 w-11" : "h-8 w-8"}`}
@@ -40,7 +40,7 @@ function Speaker({ src, label = "Reproducir audio", big = false }: { src: string
   );
 }
 
-export function ReviewSession({ cards }: { cards: ReviewCard[] }) {
+export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { cards: ReviewCard[]; autoplay?: boolean; cardAnim?: string }) {
   const router = useRouter();
   const reduce = useReducedMotion();
   const [idx, setIdx] = useState(0);
@@ -57,15 +57,15 @@ export function ReviewSession({ cards }: { cards: ReviewCard[] }) {
     const a = wordAudioRef.current;
     if (a) {
       a.currentTime = 0;
-      void a.play();
+      a.play().catch(() => {});
     }
   }, []);
 
   const reveal = useCallback(() => {
     if (revealed) return;
     setRevealed(true);
-    if (card?.audio) setTimeout(playWord, 120);
-  }, [revealed, card, playWord]);
+    if (autoplay && card?.audio) setTimeout(playWord, 120);
+  }, [revealed, card, playWord, autoplay]);
 
   const grade = useCallback(
     async (g: number) => {
@@ -89,6 +89,8 @@ export function ReviewSession({ cards }: { cards: ReviewCard[] }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (finished) return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
       if ((e.key === " " || e.key === "Enter") && !revealed) {
         e.preventDefault();
         reveal();
@@ -166,23 +168,23 @@ export function ReviewSession({ cards }: { cards: ReviewCard[] }) {
                   key="front"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1, rotateY: 0 }}
-                  exit={reduce ? { opacity: 0 } : { opacity: 0, rotateY: -8 }}
+                  exit={reduce ? { opacity: 0 } : { opacity: 0, rotateY: cardAnim === "flip" ? -90 : -8 }}
                   transition={{ duration: reduce ? 0.05 : 0.18, ease: EASE }}
                 >
-                  <div className="font-jp text-5xl font-medium leading-tight text-[var(--color-fg)] sm:text-6xl">{card.expression}</div>
+                  <div lang="ja" className="font-jp text-5xl font-medium leading-tight text-[var(--color-fg)] sm:text-6xl">{card.expression}</div>
                   <p className="mt-6 text-sm text-[var(--color-fg-faint)]">Toca para mostrar · espacio</p>
                 </motion.div>
               ) : (
                 <motion.div
                   key="back"
-                  initial={reduce ? { opacity: 0 } : { opacity: 0, rotateY: 8 }}
+                  initial={reduce ? { opacity: 0 } : { opacity: 0, rotateY: cardAnim === "flip" ? 90 : 8 }}
                   animate={{ opacity: 1, rotateY: 0 }}
-                  transition={{ duration: reduce ? 0.05 : 0.22, ease: EASE }}
+                  transition={{ duration: reduce ? 0.05 : cardAnim === "flip" ? 0.3 : 0.22, ease: EASE }}
                   className="flex flex-col items-center gap-3"
                 >
-                  <div className="font-jp text-4xl font-medium leading-tight text-[var(--color-fg)] sm:text-5xl">{card.expression}</div>
+                  <div lang="ja" className="font-jp text-4xl font-medium leading-tight text-[var(--color-fg)] sm:text-5xl">{card.expression}</div>
                   <div className="flex items-center gap-3">
-                    <span className="font-jp text-xl text-[var(--color-ember)]">{card.reading}</span>
+                    <span lang="ja" className="font-jp text-xl text-[var(--color-ember)]">{card.reading}</span>
                     {card.audio && <Speaker src={`/${card.audio}`} label="Pronunciación" />}
                   </div>
                   <p className="max-w-md text-pretty text-lg text-[var(--color-fg)]">{card.meaning}</p>
@@ -206,7 +208,7 @@ export function ReviewSession({ cards }: { cards: ReviewCard[] }) {
                 {card.sentences.map((s, i) => (
                   <div key={i} className="surface p-4">
                     <div className="flex items-start justify-between gap-3">
-                      <p className="font-jp text-lg leading-relaxed text-[var(--color-fg)]">{s.jp}</p>
+                      <p lang="ja" className="font-jp text-lg leading-relaxed text-[var(--color-fg)]">{s.jp}</p>
                       {s.audio && <Speaker src={`/${s.audio}`} label="Audio de la frase" />}
                     </div>
                     {s.en && <p className="mt-1 text-sm text-[var(--color-fg-muted)]">{s.en}</p>}
@@ -248,9 +250,10 @@ export function ReviewSession({ cards }: { cards: ReviewCard[] }) {
                   key={b.g}
                   disabled={pending}
                   onClick={() => grade(b.g)}
-                  className="flex flex-col items-center gap-0.5 rounded-xl border py-2.5 transition-[transform,background-color] duration-[var(--motion-fast)] hover:bg-[color-mix(in_oklab,var(--btn)_14%,transparent)] active:scale-[0.97] disabled:opacity-50"
+                  className="relative flex flex-col items-center gap-0.5 rounded-xl border py-2.5 transition-[transform,background-color] duration-[var(--motion-fast)] hover:bg-[color-mix(in_oklab,var(--btn)_14%,transparent)] active:scale-[0.97] disabled:opacity-50"
                   style={{ borderColor: "color-mix(in oklab, var(--btn) 45%, transparent)", ["--btn" as string]: b.color }}
                 >
+                  <span className="absolute right-1.5 top-1 hidden rounded border border-[var(--color-line)] px-1 text-[10px] text-[var(--color-fg-faint)] sm:block">{b.key}</span>
                   <span className="text-sm font-medium" style={{ color: b.color }}>{b.label}</span>
                   <span className="text-[11px] tabular-nums text-[var(--color-fg-faint)]">{card.intervals[["again", "hard", "good", "easy"][b.g - 1] as keyof ReviewCard["intervals"]]}</span>
                 </button>

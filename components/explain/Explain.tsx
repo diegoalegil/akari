@@ -14,6 +14,7 @@ export function Explain({ context, label = "Explícame" }: { context: ExplainCon
   const [input, setInput] = useState("");
   const startedRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const ask = useCallback(
     async (question?: string) => {
@@ -62,6 +63,17 @@ export function Explain({ context, label = "Explícame" }: { context: ExplainCon
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [history]);
 
+  // Escape closes; move focus into the panel when it opens.
+  useEffect(() => {
+    if (!open) return;
+    inputRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
   return (
     <>
       <button
@@ -83,6 +95,9 @@ export function Explain({ context, label = "Explícame" }: { context: ExplainCon
         {open && (
           <motion.div className="fixed inset-0 z-50 flex justify-end bg-black/40" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setOpen(false)}>
             <motion.aside
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="explain-title"
               onClick={(e) => e.stopPropagation()}
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
@@ -94,7 +109,7 @@ export function Explain({ context, label = "Explícame" }: { context: ExplainCon
               <header className="flex items-center gap-3 border-b border-[var(--color-line)] px-5 pt-[max(0.9rem,env(safe-area-inset-top))] pb-3">
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-[var(--color-fg)]">Sensei</span>
+                    <span id="explain-title" className="font-medium text-[var(--color-fg)]">Sensei</span>
                     <span className="rounded bg-[color-mix(in_oklab,var(--color-indigo)_22%,transparent)] px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--color-indigo)]">IA</span>
                   </div>
                   <p className="text-[11px] text-[var(--color-fg-faint)]">puede fallar · repregunta si dudas</p>
@@ -132,6 +147,7 @@ export function Explain({ context, label = "Explícame" }: { context: ExplainCon
                 className="flex items-center gap-2 border-t border-[var(--color-line)] px-4 pb-[max(0.9rem,env(safe-area-inset-bottom))] pt-3"
               >
                 <input
+                  ref={inputRef}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Repregunta a Sensei…"

@@ -1,5 +1,6 @@
 import "server-only";
 import { getDb } from "./db";
+import { computeStreak, seeded } from "./queries";
 
 type Row = Record<string, unknown>;
 const n = (db: ReturnType<typeof getDb>, sql: string, ...p: unknown[]) =>
@@ -17,24 +18,14 @@ export type Stats = {
   forecast: { date: string; count: number }[]; // next 14 days
 };
 
-function streakFrom(db: ReturnType<typeof getDb>): number {
-  const days = (db.prepare("SELECT DISTINCT date(reviewed_at,'localtime') d FROM review_log ORDER BY d DESC").all() as Row[]).map((r) => r.d as string);
-  if (!days.length) return 0;
-  const today = (db.prepare("SELECT date('now','localtime') d").get() as Row).d as string;
-  const DAY = 86_400_000;
-  const u = (s: string) => Date.parse(s + "T00:00:00Z");
-  let cursor = u(today);
-  if (days[0] !== today) cursor -= DAY;
-  let streak = 0;
-  for (const d of days) {
-    if (u(d) === cursor) { streak++; cursor -= DAY; }
-    else if (u(d) < cursor) break;
-  }
-  return streak;
-}
+const EMPTY: Stats = {
+  retention: null, streak: 0, viewsToday: 0, mastery: null, totalReviews: 0,
+  heatmap: [], heatmapMax: 0, jlpt: [5, 4, 3, 2, 1].map((l) => ({ level: `N${l}`, total: 0, known: 0 })), forecast: [],
+};
 
 export function getStats(): Stats {
   const db = getDb();
+  if (!seeded(db)) return EMPTY;
   const totalReviews = n(db, "SELECT count(*) c FROM review_log");
   const passed = n(db, "SELECT count(*) c FROM review_log WHERE grade >= 3");
   const introduced = n(db, "SELECT count(*) c FROM card_state WHERE introduced_at IS NOT NULL");
@@ -95,7 +86,7 @@ export function getStats(): Stats {
 
   return {
     retention: totalReviews ? passed / totalReviews : null,
-    streak: streakFrom(db),
+    streak: computeStreak(db),
     viewsToday: n(db, "SELECT count(*) c FROM review_log WHERE date(reviewed_at,'localtime') = date('now','localtime')"),
     mastery: introduced ? known / introduced : null,
     totalReviews,

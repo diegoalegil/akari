@@ -11,6 +11,7 @@ export type JlptIndex = { lookup(expression: string, reading: string): number | 
 export function parseJlpt(files: { level: number; path: string }[]): JlptIndex {
   const byPair = new Map<string, number>();
   const byExpr = new Map<string, number>();
+  const ambiguous = new Set<string>(); // same surface form at >1 JLPT level
   // Process easiest first (n5=5 … n1=1); "set if absent" keeps the easiest.
   for (const { level, path } of [...files].sort((a, b) => b.level - a.level)) {
     const lines = readFileSync(path, "utf8").split("\n");
@@ -23,13 +24,22 @@ export function parseJlpt(files: { level: number; path: string }[]): JlptIndex {
       if (!expr) continue;
       const pk = expr + SEP + reading;
       if (!byPair.has(pk)) byPair.set(pk, level);
-      if (!byExpr.has(expr)) byExpr.set(expr, level);
+      if (byExpr.has(expr)) {
+        if (byExpr.get(expr) !== level) ambiguous.add(expr);
+      } else {
+        byExpr.set(expr, level);
+      }
     }
   }
   return {
     size: byExpr.size,
     lookup(expression, reading) {
-      return byPair.get(expression + SEP + reading) ?? byExpr.get(expression) ?? null;
+      // Exact (expression+reading) pair is always safe. The surface-only
+      // fallback is used only when that surface maps to a single JLPT level.
+      const pair = byPair.get(expression + SEP + reading);
+      if (pair != null) return pair;
+      if (ambiguous.has(expression)) return null;
+      return byExpr.get(expression) ?? null;
     },
   };
 }

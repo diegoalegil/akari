@@ -1,6 +1,6 @@
 import "server-only";
 import { getDb } from "./db";
-import { getSetting } from "./queries";
+import { getSetting, seeded } from "./queries";
 import { previewIntervals } from "./fsrs";
 
 // Builds the daily word queue (due reviews + new cards up to the daily limit)
@@ -24,8 +24,10 @@ export type ReviewCard = {
 
 type Row = Record<string, unknown>;
 
-function buildCard(db: ReturnType<typeof getDb>, id: number, isNew: boolean, now: Date): ReviewCard {
-  const w = db.prepare("SELECT expression, reading, meaning_en, meaning_es, audio_path FROM words WHERE id = ?").get(id) as Row;
+function buildCard(db: ReturnType<typeof getDb>, id: number, isNew: boolean, now: Date): ReviewCard | null {
+  const w = db.prepare("SELECT expression, reading, meaning_en, meaning_es, audio_path FROM words WHERE id = ?").get(id) as Row | undefined;
+  const cs0 = db.prepare("SELECT fsrs_card FROM card_state WHERE card_type='word' AND card_id = ?").get(id) as Row | undefined;
+  if (!w || !cs0) return null;
   const sentences = (
     db
       .prepare(
@@ -41,7 +43,6 @@ function buildCard(db: ReturnType<typeof getDb>, id: number, isNew: boolean, now
       .prepare("SELECT k.literal literal, k.meanings meanings, k.meanings_es meanings_es FROM word_kanji wk JOIN kanji k ON k.id = wk.kanji_id WHERE wk.word_id = ?")
       .all(id) as Row[]
   ).map((r) => ({ literal: r.literal as string, meanings: (JSON.parse((r.meanings_es as string) || (r.meanings as string) || "[]") as string[]).slice(0, 3) }));
-  const cs = db.prepare("SELECT fsrs_card FROM card_state WHERE card_type='word' AND card_id = ?").get(id) as Row;
 
   return {
     cardType: "word",
@@ -53,12 +54,13 @@ function buildCard(db: ReturnType<typeof getDb>, id: number, isNew: boolean, now
     audio: (w.audio_path as string) ?? null,
     sentences,
     kanji,
-    intervals: previewIntervals(cs.fsrs_card as string, now),
+    intervals: previewIntervals(cs0.fsrs_card as string, now),
   };
 }
 
 export function getReviewQueue(): ReviewCard[] {
   const db = getDb();
+  if (!seeded(db)) return [];
   const newPerDay = Number(getSetting("new_per_day", "10"));
   const introducedToday = (
     db
@@ -85,5 +87,5 @@ export function getReviewQueue(): ReviewCard[] {
   return [
     ...due.map((r) => buildCard(db, r.id, false, now)),
     ...fresh.map((r) => buildCard(db, r.id, true, now)),
-  ];
+  ].filter((c): c is ReviewCard => c !== null);
 }

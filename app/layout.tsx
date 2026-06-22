@@ -3,7 +3,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Nav } from "@/components/Nav";
 import { Splash } from "@/components/Splash";
-import { getStreak } from "@/lib/queries";
+import { MotionProvider } from "@/components/MotionProvider";
+import { getSettings, getStreak } from "@/lib/queries";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 
@@ -13,8 +14,9 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const { theme, reducedMotion } = getSettings();
   return (
-    <html lang="es" className={`${inter.variable} dark`}>
+    <html lang="es" data-theme={theme} className={`${inter.variable}${reducedMotion ? " reduce-motion" : ""}`}>
       <head>
         {/* Japanese display face when online; macOS Hiragino is the offline fallback. */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -25,9 +27,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         />
       </head>
       <body>
-        <Splash />
-        <Nav streak={getStreak()} />
-        <main className="min-h-screen pb-24 md:pb-0 md:pl-64">{children}</main>
+        <MotionProvider reduced={reducedMotion}>
+          <Splash />
+          <Nav streak={getStreak()} />
+          <main className="min-h-screen pb-24 md:pb-0 md:pl-64">{children}</main>
+        </MotionProvider>
       </body>
     </html>
   );

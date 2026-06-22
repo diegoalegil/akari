@@ -1,5 +1,6 @@
 import "server-only";
 import { getDb } from "./db";
+import { seeded } from "./queries";
 
 export type KanjiWord = { expression: string; reading: string; meaning: string };
 export type KanjiDetail = {
@@ -30,6 +31,7 @@ function extractStrokes(svg: string | null | undefined): string[] {
 
 export function getKanjiDetail(literal: string): KanjiDetail | null {
   const db = getDb();
+  if (!seeded(db)) return null;
   const k = db.prepare("SELECT * FROM kanji WHERE literal = ?").get(literal) as Row | undefined;
   if (!k) return null;
 
@@ -44,9 +46,16 @@ export function getKanjiDetail(literal: string): KanjiDetail | null {
       .all(k.id) as Row[]
   ).map((r) => ({ expression: r.expression as string, reading: r.reading as string, meaning: r.meaning as string }));
 
+  // Next kanji in the same order as the browse list / home strip (by frequency).
   const next = db
-    .prepare("SELECT literal FROM kanji WHERE id > ? AND id IN (SELECT kanji_id FROM word_kanji) ORDER BY id LIMIT 1")
-    .get(k.id) as Row | undefined;
+    .prepare(
+      `WITH ranked AS (
+         SELECT literal, ROW_NUMBER() OVER (ORDER BY (frequency IS NULL), frequency ASC, stroke_count ASC, id) rn
+         FROM kanji WHERE id IN (SELECT kanji_id FROM word_kanji)
+       )
+       SELECT literal FROM ranked WHERE rn = (SELECT rn + 1 FROM ranked WHERE literal = ?)`,
+    )
+    .get(k.literal) as Row | undefined;
 
   return {
     literal: k.literal as string,
@@ -68,6 +77,7 @@ export type KanjiListItem = { literal: string; meaning: string; jlpt: number | n
 /** Browse list: kanji that appear in the vocabulary, most frequent first. */
 export function getKanjiList(limit = 140): KanjiListItem[] {
   const db = getDb();
+  if (!seeded(db)) return [];
   return (
     db
       .prepare(

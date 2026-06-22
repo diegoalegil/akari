@@ -12,6 +12,7 @@ const SOURCES: Source[] = [
   { name: "KanjiVG", use: "SVGs con el orden de trazos de cada kanji", license: "Ulrich Apel · CC BY-SA 3.0", href: "https://github.com/KanjiVG/kanjivg", versionKey: "kanjivg_version" },
   { name: "Tatoeba", use: "Frases de ejemplo y audio nativo", license: "CC BY 2.0 FR (audio: licencia por grabación)", href: "https://tatoeba.org", },
   { name: "Kaishi 1.5k", use: "Lista curada y orden de estudio + audio incluido", license: "donkuri", href: "https://github.com/donkuri/kaishi", versionKey: "kaishi_version" },
+  { name: "open-anki-jlpt-decks", use: "Nivel JLPT de cada palabra", license: "jamsinclair · MIT", href: "https://github.com/jamsinclair/open-anki-jlpt-decks" },
 ];
 
 export default function AttributionsPage() {

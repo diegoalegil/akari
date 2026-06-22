@@ -22,7 +22,7 @@ function cleanReading(r: string): string {
   return r.split(".")[0].replace(/[-.]/g, "");
 }
 
-function seeded(db: ReturnType<typeof getDb>): boolean {
+export function seeded(db: ReturnType<typeof getDb> = getDb()): boolean {
   const row = db
     .prepare("SELECT count(*) c FROM sqlite_master WHERE type='table' AND name='words'")
     .get() as { c: number };
@@ -45,9 +45,8 @@ export function getSetting(key: string, fallback: string): string {
 
 export type AppSettings = {
   newPerDay: number;
-  theme: string; // dark | indigo | system
+  theme: string; // dark | indigo
   cardAnim: string; // turn | flip
-  sound: boolean;
   autoplay: boolean;
   reducedMotion: boolean;
 };
@@ -57,7 +56,6 @@ export function getSettings(): AppSettings {
     newPerDay: Number(getSetting("new_per_day", "10")),
     theme: getSetting("theme", "dark"),
     cardAnim: getSetting("card_anim", "turn"),
-    sound: getSetting("sound", "0") === "1",
     autoplay: getSetting("autoplay", "1") === "1",
     reducedMotion: getSetting("reduced_motion", "0") === "1",
   };
@@ -67,7 +65,7 @@ const count = (db: ReturnType<typeof getDb>, sql: string): number =>
   (db.prepare(sql).get() as { c: number }).c;
 
 /** Consecutive days (ending today or yesterday) with at least one review. */
-function computeStreak(db: ReturnType<typeof getDb>): number {
+export function computeStreak(db: ReturnType<typeof getDb>): number {
   const days = (
     db
       .prepare("SELECT DISTINCT date(reviewed_at, 'localtime') d FROM review_log ORDER BY d DESC")
@@ -116,11 +114,12 @@ export function getDashboard(): DashboardData {
     const on = JSON.parse(k.on_readings || "[]") as string[];
     return { literal: k.literal, reading: cleanReading(kun[0] || on[0] || "") };
   });
+  // Word-scoped to match getReviewQueue / the "Empezar sesión" CTA (words only).
   const introducedToday = count(
     db,
-    "SELECT count(*) c FROM card_state WHERE introduced_at IS NOT NULL AND date(introduced_at,'localtime') = date('now','localtime')",
+    "SELECT count(*) c FROM card_state WHERE card_type='word' AND introduced_at IS NOT NULL AND date(introduced_at,'localtime') = date('now','localtime')",
   );
-  const notIntroduced = count(db, "SELECT count(*) c FROM card_state WHERE introduced_at IS NULL");
+  const notIntroduced = count(db, "SELECT count(*) c FROM card_state WHERE card_type='word' AND introduced_at IS NULL");
 
   return {
     seeded: true,
@@ -132,7 +131,7 @@ export function getDashboard(): DashboardData {
     },
     dueNow: count(
       db,
-      "SELECT count(*) c FROM card_state WHERE introduced_at IS NOT NULL AND due IS NOT NULL AND datetime(due) <= datetime('now')",
+      "SELECT count(*) c FROM card_state WHERE card_type='word' AND introduced_at IS NOT NULL AND due IS NOT NULL AND datetime(due) <= datetime('now')",
     ),
     newRemaining: Math.max(0, Math.min(newPerDay - introducedToday, notIntroduced)),
     reviewsToday: count(db, "SELECT count(*) c FROM review_log WHERE date(reviewed_at,'localtime') = date('now','localtime')"),
