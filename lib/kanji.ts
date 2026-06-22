@@ -20,7 +20,7 @@ export type KanjiDetail = {
 type Row = Record<string, unknown>;
 
 /** Pull ordered stroke path data out of a KanjiVG SVG (document order = order). */
-function extractStrokes(svg: string | null | undefined): string[] {
+export function extractStrokes(svg: string | null | undefined): string[] {
   if (!svg) return [];
   const out: string[] = [];
   const re = /<path[^>]*\bd="([^"]+)"/g;
