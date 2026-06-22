@@ -92,7 +92,7 @@ export function Nav({ streak = 0 }: { streak?: number }) {
       {/* arc streak + search (sidebar only) */}
       <div className="mt-auto hidden flex-col gap-3 border-t border-[var(--color-line)] pt-4 md:flex">
         <div className="flex items-center gap-2.5 px-1">
-          <Lantern size={26} animated={streak > 0} glow={streak > 0} />
+          <Lantern size={26} animated={streak > 0} intensity={Math.min(1, streak / 30)} />
           <div>
             <div className="text-[10px] uppercase tracking-wider text-[var(--color-ember)]">Arco en desarrollo</div>
             <div className="text-sm font-semibold text-[var(--color-fg)]">

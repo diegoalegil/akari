@@ -43,15 +43,17 @@ function Speaker({ src, label = "Reproducir audio", big = false }: { src: string
 export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { cards: ReviewCard[]; autoplay?: boolean; cardAnim?: string }) {
   const router = useRouter();
   const reduce = useReducedMotion();
+  const [queue, setQueue] = useState<ReviewCard[]>(cards);
   const [idx, setIdx] = useState(0);
   const [revealed, setRevealed] = useState(false);
   const [pending, setPending] = useState(false);
   const [done, setDone] = useState(0);
   const startedAt = useRef<number>(Date.now());
+  const correctRef = useRef(0);
   const wordAudioRef = useRef<HTMLAudioElement>(null);
 
-  const finished = idx >= cards.length;
-  const card = cards[idx];
+  const finished = idx >= queue.length;
+  const card = queue[idx];
 
   const playWord = useCallback(() => {
     const a = wordAudioRef.current;
@@ -75,6 +77,9 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { c
       try {
         await gradeCard(card.cardType, card.cardId, g as 1 | 2 | 3 | 4, elapsed);
       } finally {
+        // "Otra vez" (Again) → re-queue the card so it returns this session.
+        if (g === 1) setQueue((q) => [...q, card]);
+        else correctRef.current += 1;
         setDone((d) => d + 1);
         setRevealed(false);
         setPending(false);
@@ -112,8 +117,9 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { c
           <Lantern size={72} />
           <h1 className="text-2xl font-semibold tracking-tight">¡Sesión completa!</h1>
           <p className="text-[var(--color-fg-muted)]">
-            {done} {done === 1 ? "tarjeta repasada" : "tarjetas repasadas"}. Continuará…
+            {done} {done === 1 ? "repaso" : "repasos"} · {correctRef.current} {correctRef.current === 1 ? "acierto" : "aciertos"}
           </p>
+          <p className="text-sm text-[var(--color-fg-faint)]">Continuará…</p>
           <button
             onClick={() => router.push("/")}
             className="mt-2 rounded-xl bg-gradient-to-r from-[var(--color-akari)] to-[var(--color-ember)] px-5 py-2.5 font-semibold text-[var(--color-ink-deep)] shadow-[var(--akari-glow)] transition-[filter] hover:brightness-105"
@@ -125,7 +131,7 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { c
     );
   }
 
-  const progress = (done / cards.length) * 100;
+  const progress = queue.length ? (done / queue.length) * 100 : 0;
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col bg-[var(--color-ink)]">
@@ -143,7 +149,7 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { c
           />
         </div>
         <span className="text-xs tabular-nums text-[var(--color-fg-faint)]">
-          {done}/{cards.length}
+          {done}/{queue.length}
         </span>
       </header>
 

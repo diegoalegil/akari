@@ -53,7 +53,7 @@ export default async function KanjiDetailPage({ params }: { params: Promise<{ li
         {/* info */}
         <div className="flex flex-col gap-5">
           <div className="flex items-start gap-4">
-            <span className="font-jp text-6xl font-medium leading-none text-[var(--color-fg)]">{k.literal}</span>
+            <span lang="ja" className="font-jp text-6xl font-medium leading-none text-[var(--color-fg)]">{k.literal}</span>
             <div className="border-l-2 border-[var(--color-ember)] pl-3">
               <div className="text-xl font-medium text-[var(--color-fg)]">{k.meanings[0] ?? lit}</div>
               {k.meanings.length > 1 && <div className="text-sm text-[var(--color-fg-muted)]">{k.meanings.slice(1, 4).join(" · ")}</div>}
@@ -69,12 +69,12 @@ export default async function KanjiDetailPage({ params }: { params: Promise<{ li
 
           <div className="surface grid grid-cols-2 divide-x divide-[var(--color-line)]">
             <div className="p-4">
-              <div className="font-jp text-xs text-[var(--color-ember)]">オン</div>
-              <div className="font-jp mt-1 text-lg text-[var(--color-fg)]">{k.on.length ? k.on.join("、") : "—"}</div>
+              <div lang="ja" className="font-jp text-xs text-[var(--color-ember)]">オン</div>
+              <div lang="ja" className="font-jp mt-1 text-lg text-[var(--color-fg)]">{k.on.length ? k.on.join("、") : "—"}</div>
             </div>
             <div className="p-4">
-              <div className="font-jp text-xs text-[var(--color-akari)]">くん</div>
-              <div className="font-jp mt-1 text-lg text-[var(--color-fg)]">{k.kun.length ? k.kun.join("、") : "—"}</div>
+              <div lang="ja" className="font-jp text-xs text-[var(--color-akari)]">くん</div>
+              <div lang="ja" className="font-jp mt-1 text-lg text-[var(--color-fg)]">{k.kun.length ? k.kun.join("、") : "—"}</div>
             </div>
           </div>
 

@@ -7,13 +7,16 @@ export function Lantern({
   size = 28,
   glow = true,
   animated = true,
+  intensity = 1,
   className = "",
 }: {
   size?: number;
   glow?: boolean;
   animated?: boolean;
+  intensity?: number; // 0..1 — scales the glow (e.g. by streak)
   className?: string;
 }) {
+  const glowOpacity = 0.3 + 0.7 * Math.max(0, Math.min(1, intensity));
   const uid = useId().replace(/:/g, "");
   const glowId = `akariGlow-${uid}`;
   const flameId = `akariFlame-${uid}`;
@@ -45,6 +48,7 @@ export function Lantern({
           cy="25"
           r="19"
           fill={`url(#${glowId})`}
+          opacity={glowOpacity}
           style={animated ? { animation: "glow-pulse 4s ease-in-out infinite", transformOrigin: "center" } : undefined}
         />
       )}

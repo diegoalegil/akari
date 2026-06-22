@@ -105,7 +105,7 @@ export default function Home() {
       <div className="mt-5 grid grid-cols-2 gap-4 md:grid-cols-4">
         <Reveal delay={0.08}>
           <div className="surface relative flex items-center gap-3 overflow-hidden p-4">
-            <Lantern size={34} animated={d.streak > 0} glow={d.streak > 0} />
+            <Lantern size={34} animated={d.streak > 0} intensity={Math.min(1, d.streak / 30)} />
             <div>
               <div className="text-2xl font-semibold leading-none">{d.streak}</div>
               <div className="mt-1 text-sm text-[var(--color-fg-muted)]">días de racha</div>
