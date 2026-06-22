@@ -37,6 +37,26 @@ export function getSetting(key: string, fallback: string): string {
   return row?.value ?? fallback;
 }
 
+export type AppSettings = {
+  newPerDay: number;
+  theme: string; // dark | indigo | system
+  cardAnim: string; // turn | flip
+  sound: boolean;
+  autoplay: boolean;
+  reducedMotion: boolean;
+};
+
+export function getSettings(): AppSettings {
+  return {
+    newPerDay: Number(getSetting("new_per_day", "10")),
+    theme: getSetting("theme", "dark"),
+    cardAnim: getSetting("card_anim", "turn"),
+    sound: getSetting("sound", "0") === "1",
+    autoplay: getSetting("autoplay", "1") === "1",
+    reducedMotion: getSetting("reduced_motion", "0") === "1",
+  };
+}
+
 const count = (db: ReturnType<typeof getDb>, sql: string): number =>
   (db.prepare(sql).get() as { c: number }).c;
 

@@ -163,3 +163,21 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Manual "movimiento reducido" toggle (Ajustes). */
+html.reduce-motion *,
+html.reduce-motion *::before,
+html.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+/* Theme: Noche-índigo — shift the ink toward indigo. */
+html[data-theme="indigo"] {
+  --color-ink: #0c0e1a;
+  --color-ink-deep: #090a14;
+  --color-surface: #15182a;
+  --color-surface-2: #1b1f36;
+  --color-surface-3: #242a45;
+}
