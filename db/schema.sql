@@ -27,7 +27,8 @@ CREATE TABLE IF NOT EXISTS words (
   meaning_en     TEXT NOT NULL,      -- gloss from the JMdict entry matched by (expr+reading)
   meaning_source TEXT NOT NULL CHECK (meaning_source IN ('jmdict', 'kaishi')),
   frequency      INTEGER,            -- lower = more frequent (from JMdict nfXX / Kaishi)
-  jlpt           INTEGER             -- best-effort; may be NULL at word level
+  jlpt           INTEGER,            -- best-effort; may be NULL at word level
+  audio_path     TEXT                -- native word-pronunciation audio (from Kaishi)
 );
 
 -- ── Kanji (KANJIDIC2 + KanjiVG stroke-order SVG) ──────────────────────────────
@@ -85,9 +86,12 @@ CREATE TABLE IF NOT EXISTS review_log (
 );
 
 -- One row per learnable item; the live FSRS state the scheduler reads/writes.
+-- fsrs_card holds the canonical ts-fsrs Card JSON (source of truth handed back
+-- to the scheduler); the other columns are denormalized for fast queue queries.
 CREATE TABLE IF NOT EXISTS card_state (
   card_type       TEXT NOT NULL CHECK (card_type IN ('kana', 'word', 'kanji')),
   card_id         INTEGER NOT NULL,
+  fsrs_card       TEXT NOT NULL,     -- ts-fsrs Card serialized as JSON
   fsrs_stability  REAL,
   fsrs_difficulty REAL,
   fsrs_reps       INTEGER NOT NULL DEFAULT 0,
