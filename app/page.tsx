@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Lantern } from "@/components/Lantern";
 import { Reveal } from "@/components/Reveal";
+import { StartSession } from "@/components/StartSession";
 import { StatCard } from "@/components/StatCard";
 import { getDashboard } from "@/lib/queries";
 
@@ -68,13 +69,7 @@ export default function Home() {
                   </li>
                 </ul>
               </div>
-              <Link
-                href="/review"
-                className="mt-7 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[var(--color-akari)] to-[var(--color-ember)] px-5 py-2.5 font-semibold text-[var(--color-ink-deep)] shadow-[var(--akari-glow)] transition-[filter,transform] duration-[var(--motion-base)] ease-[var(--ease-akari)] hover:brightness-105 active:scale-[0.98]"
-              >
-                Empezar sesión
-                <span aria-hidden>→</span>
-              </Link>
+              <StartSession />
             </>
           ) : (
             <div className="mt-5 flex items-center gap-4">
@@ -88,25 +83,44 @@ export default function Home() {
         </section>
       </Reveal>
 
+      {/* recent kanji */}
+      {d.recentKanji.length > 0 && (
+        <Reveal delay={0.06}>
+          <div className="mt-5 flex gap-2.5 overflow-x-auto pb-1">
+            {d.recentKanji.map((k) => (
+              <Link key={k.literal} href={`/kanji/${encodeURIComponent(k.literal)}`} className="surface flex min-w-[72px] flex-col items-center gap-1 px-4 py-3 transition-colors hover:border-[var(--color-line-strong)]">
+                <span className="font-jp text-2xl text-[var(--color-fg)]">{k.literal}</span>
+                <span className="font-jp text-[11px] text-[var(--color-fg-faint)]">{k.reading}</span>
+              </Link>
+            ))}
+            <Link href="/kanji" className="surface flex min-w-[72px] flex-col items-center justify-center gap-0.5 border-dashed px-4 py-3 text-[var(--color-fg-faint)] transition-colors hover:text-[var(--color-fg)]">
+              <span className="text-lg leading-none">+</span>
+              <span className="text-[11px]">{Math.max(0, d.kanjiInVocab - d.recentKanji.length)}</span>
+            </Link>
+          </div>
+        </Reveal>
+      )}
+
       {/* Streak + stats */}
       <div className="mt-5 grid grid-cols-2 gap-4 md:grid-cols-4">
         <Reveal delay={0.08}>
-          <div className="surface flex items-center gap-3 p-4">
+          <div className="surface relative flex items-center gap-3 overflow-hidden p-4">
             <Lantern size={34} animated={d.streak > 0} glow={d.streak > 0} />
             <div>
               <div className="text-2xl font-semibold leading-none">{d.streak}</div>
               <div className="mt-1 text-sm text-[var(--color-fg-muted)]">días de racha</div>
             </div>
+            <span className="absolute inset-x-4 bottom-0 h-[2px] rounded-full bg-[var(--color-ember)] opacity-70" />
           </div>
         </Reveal>
         <Reveal delay={0.12}>
-          <StatCard label="reseñas hoy" value={d.reviewsToday} glyph="今" />
+          <StatCard label="reseñas hoy" value={d.reviewsToday} glyph="今" accent="var(--color-indigo)" />
         </Reveal>
         <Reveal delay={0.16}>
-          <StatCard label="vocabulario" value={NF.format(d.totals.words)} glyph="語" />
+          <StatCard label="vocabulario" value={NF.format(d.totals.words)} glyph="語" accent="var(--color-easy)" />
         </Reveal>
         <Reveal delay={0.2}>
-          <StatCard label="kanji" value={NF.format(d.totals.kanji)} glyph="字" />
+          <StatCard label="kanji" value={NF.format(d.totals.kanji)} glyph="字" accent="var(--color-akari)" />
         </Reveal>
       </div>
 

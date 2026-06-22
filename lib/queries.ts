@@ -14,7 +14,13 @@ export type DashboardData = {
   newRemaining: number;
   reviewsToday: number;
   streak: number;
+  kanjiInVocab: number;
+  recentKanji: { literal: string; reading: string }[];
 };
+
+function cleanReading(r: string): string {
+  return r.split(".")[0].replace(/[-.]/g, "");
+}
 
 function seeded(db: ReturnType<typeof getDb>): boolean {
   const row = db
@@ -87,12 +93,29 @@ function computeStreak(db: ReturnType<typeof getDb>): number {
   return streak;
 }
 
+export function getStreak(): number {
+  const db = getDb();
+  return seeded(db) ? computeStreak(db) : 0;
+}
+
 export function getDashboard(): DashboardData {
   const db = getDb();
   if (!seeded(db)) {
-    return { seeded: false, newPerDay: 10, totals: { words: 0, kanji: 0, kana: 0 }, dueNow: 0, newRemaining: 0, reviewsToday: 0, streak: 0 };
+    return { seeded: false, newPerDay: 10, totals: { words: 0, kanji: 0, kana: 0 }, dueNow: 0, newRemaining: 0, reviewsToday: 0, streak: 0, kanjiInVocab: 0, recentKanji: [] };
   }
   const newPerDay = Number(getSetting("new_per_day", "10"));
+  const recentKanji = (
+    db
+      .prepare(
+        `SELECT literal, kun_readings, on_readings FROM kanji WHERE id IN (SELECT kanji_id FROM word_kanji)
+         ORDER BY (frequency IS NULL), frequency ASC LIMIT 6`,
+      )
+      .all() as { literal: string; kun_readings: string; on_readings: string }[]
+  ).map((k) => {
+    const kun = JSON.parse(k.kun_readings || "[]") as string[];
+    const on = JSON.parse(k.on_readings || "[]") as string[];
+    return { literal: k.literal, reading: cleanReading(kun[0] || on[0] || "") };
+  });
   const introducedToday = count(
     db,
     "SELECT count(*) c FROM card_state WHERE introduced_at IS NOT NULL AND date(introduced_at,'localtime') = date('now','localtime')",
@@ -114,5 +137,7 @@ export function getDashboard(): DashboardData {
     newRemaining: Math.max(0, Math.min(newPerDay - introducedToday, notIntroduced)),
     reviewsToday: count(db, "SELECT count(*) c FROM review_log WHERE date(reviewed_at,'localtime') = date('now','localtime')"),
     streak: computeStreak(db),
+    kanjiInVocab: count(db, "SELECT count(DISTINCT kanji_id) c FROM word_kanji"),
+    recentKanji,
   };
 }

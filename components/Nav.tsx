@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, type ReactNode } from "react";
 import { Lantern } from "./Lantern";
 
 type Item = { href: string; label: string; icon: ReactNode };
@@ -44,8 +44,21 @@ function isActive(pathname: string, href: string): boolean {
   return href === "/" ? pathname === "/" : pathname.startsWith(href);
 }
 
-export function Nav() {
+export function Nav({ streak = 0 }: { streak?: number }) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  // ⌘K / Ctrl-K opens search.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        router.push("/search");
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [router]);
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-30 flex flex-row items-center justify-around border-t border-[var(--color-line)] bg-[color-mix(in_oklab,var(--color-surface)_85%,transparent)] px-2 py-1 backdrop-blur-xl
@@ -76,12 +89,25 @@ export function Nav() {
         );
       })}
 
-      <Link
-        href="/attributions"
-        className="mt-auto hidden px-3 py-2 text-xs text-[var(--color-fg-faint)] transition-colors hover:text-[var(--color-fg-muted)] md:block"
-      >
-        Créditos · datasets
-      </Link>
+      {/* arc streak + search (sidebar only) */}
+      <div className="mt-auto hidden flex-col gap-3 border-t border-[var(--color-line)] pt-4 md:flex">
+        <div className="flex items-center gap-2.5 px-1">
+          <Lantern size={26} animated={streak > 0} glow={streak > 0} />
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-[var(--color-ember)]">Arco en desarrollo</div>
+            <div className="text-sm font-semibold text-[var(--color-fg)]">
+              {streak} <span className="font-normal text-[var(--color-fg-faint)]">días</span>
+            </div>
+          </div>
+        </div>
+        <Link
+          href="/search"
+          className="flex items-center justify-between rounded-lg border border-[var(--color-line)] bg-[var(--color-surface-2)] px-3 py-2 text-sm text-[var(--color-fg-faint)] transition-colors hover:border-[var(--color-line-strong)]"
+        >
+          Buscar
+          <kbd className="rounded border border-[var(--color-line-strong)] px-1.5 py-0.5 font-sans text-[10px]">⌘K</kbd>
+        </Link>
+      </div>
     </nav>
   );
 }

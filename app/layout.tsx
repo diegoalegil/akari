@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Nav } from "@/components/Nav";
 import { Splash } from "@/components/Splash";
+import { getStreak } from "@/lib/queries";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 
@@ -25,7 +26,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       </head>
       <body>
         <Splash />
-        <Nav />
+        <Nav streak={getStreak()} />
         <main className="min-h-screen pb-24 md:pb-0 md:pl-64">{children}</main>
       </body>
     </html>
