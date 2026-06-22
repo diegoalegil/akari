@@ -14,6 +14,7 @@ import { parseJmdict } from "./parse/jmdict.ts";
 import { parseKanjidic } from "./parse/kanjidic.ts";
 import { parseKanjivg } from "./parse/kanjivg.ts";
 import { parseKaishi } from "./parse/kaishi.ts";
+import { parseJlpt } from "./parse/jlpt.ts";
 import { loadEngSubset, loadTatoeba } from "./parse/tatoeba.ts";
 import { DB_PATH, PUBLIC_AUDIO, ROOT, ensureDir, kanjiChars } from "./lib/util.ts";
 
@@ -22,7 +23,8 @@ const FETCH_TATOEBA_AUDIO = process.env.SEED_TATOEBA_AUDIO === "1";
 
 type WordRow = {
   id: number; order: number; expression: string; reading: string;
-  meaning: string; meaningSource: "jmdict" | "kaishi"; frequency: number | null; audio: string | null;
+  meaning: string; meaningSource: "jmdict" | "kaishi"; frequency: number | null;
+  jlpt: number | null; audio: string | null;
 };
 type SentenceRow = { id: number; jp: string; en: string | null; source: "tatoeba" | "kaishi" };
 
@@ -68,6 +70,15 @@ export async function buildDb(manifest: Manifest): Promise<Record<string, number
   const kanjivg = await parseKanjivg(manifest.kanjivg.zipPath, manifest.kanjivg.extractDir);
   console.log(`  ${kanjivg.count} stroke SVGs`);
 
+  const jlptIndex = parseJlpt([
+    { level: 5, path: manifest.jlpt.n5 },
+    { level: 4, path: manifest.jlpt.n4 },
+    { level: 3, path: manifest.jlpt.n3 },
+    { level: 2, path: manifest.jlpt.n2 },
+    { level: 1, path: manifest.jlpt.n1 },
+  ]);
+  console.log(`  ${jlptIndex.size} JLPT-tagged vocab`);
+
   // ── Words (Kaishi order, enriched from JMdict by exact pair) ─────────────────
   let jmHits = 0;
   const words: WordRow[] = notes.map((n) => {
@@ -81,6 +92,7 @@ export async function buildDb(manifest: Manifest): Promise<Record<string, number
       meaning: m?.meaning || n.meaning,
       meaningSource: m ? "jmdict" : "kaishi",
       frequency: m?.frequency ?? n.frequency,
+      jlpt: jlptIndex.lookup(n.expression, n.reading),
       audio: n.wordAudio,
     };
   });
@@ -215,7 +227,7 @@ export async function buildDb(manifest: Manifest): Promise<Record<string, number
     const wStmt = db.prepare(
       "INSERT INTO words (id,kaishi_order,expression,reading,meaning_en,meaning_es,meaning_source,frequency,jlpt,audio_path) VALUES (?,?,?,?,?,?,?,?,?,?)",
     );
-    for (const w of words) wStmt.run(w.id, w.order, w.expression, w.reading, w.meaning, tr(w.meaning), w.meaningSource, w.frequency, null, w.audio);
+    for (const w of words) wStmt.run(w.id, w.order, w.expression, w.reading, w.meaning, tr(w.meaning), w.meaningSource, w.frequency, w.jlpt, w.audio);
 
     const kStmt = db.prepare(
       "INSERT INTO kanji (id,literal,jlpt,grade,frequency,stroke_count,meanings,meanings_es,on_readings,kun_readings,kanjivg_svg) VALUES (?,?,?,?,?,?,?,?,?,?,?)",

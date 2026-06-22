@@ -23,7 +23,10 @@ export type Manifest = {
     links: string;
     audio: string;
   };
+  jlpt: Record<"n5" | "n4" | "n3" | "n2" | "n1", string>;
 };
+
+const JLPT_BASE = "https://raw.githubusercontent.com/jamsinclair/open-anki-jlpt-decks/main/src";
 
 const TATOEBA = "https://downloads.tatoeba.org/exports";
 
@@ -71,12 +74,20 @@ export async function resolveAndDownload(): Promise<Manifest> {
   const linksTsv = await extractBz2(linkBz, path.join(RAW_DIR, "jpn-eng_links.tsv"));
   const audioTsv = await extractBz2(audioBz, path.join(RAW_DIR, "jpn_sentences_with_audio.tsv"));
 
+  // ── JLPT vocabulary levels (jamsinclair/open-anki-jlpt-decks, MIT) ──────────
+  console.log("JLPT vocab:");
+  const jlpt = {} as Record<"n5" | "n4" | "n3" | "n2" | "n1", string>;
+  for (const lvl of ["n5", "n4", "n3", "n2", "n1"] as const) {
+    jlpt[lvl] = await download(`${JLPT_BASE}/${lvl}.csv`, path.join(RAW_DIR, `jlpt-${lvl}.csv`));
+  }
+
   const manifest: Manifest = {
     jmdict: { tag: jm.tag, jsonPath: jmJson },
     kanjidic: { tag: kd.tag, jsonPath: kdJson },
     kanjivg: { tag: kv.tag, zipPath: kvZip, extractDir: kvDir },
     kaishi: { tag: ka.tag, apkgPath: apkg },
     tatoeba: { jpnSentences: jpnTsv, engSentences: engTsv, links: linksTsv, audio: audioTsv },
+    jlpt,
   };
   await writeFile(path.join(RAW_DIR, "manifest.json"), JSON.stringify(manifest, null, 2));
   console.log("\nManifest written to data/raw/manifest.json");
