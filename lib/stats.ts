@@ -28,8 +28,9 @@ export function getStats(): Stats {
   if (!seeded(db)) return EMPTY;
   const totalReviews = n(db, "SELECT count(*) c FROM review_log");
   const passed = n(db, "SELECT count(*) c FROM review_log WHERE grade >= 3");
-  const introduced = n(db, "SELECT count(*) c FROM card_state WHERE introduced_at IS NOT NULL");
-  const known = n(db, "SELECT count(*) c FROM card_state WHERE introduced_at IS NOT NULL AND state = 2");
+  // Word-scoped, mirroring the (word-only) dashboard so "dominio" is a vocab figure.
+  const introduced = n(db, "SELECT count(*) c FROM card_state WHERE card_type='word' AND introduced_at IS NOT NULL");
+  const known = n(db, "SELECT count(*) c FROM card_state WHERE card_type='word' AND introduced_at IS NOT NULL AND state = 2");
 
   // heatmap: counts per day, then fill the last 53 week-aligned weeks
   const counts = new Map<string, number>();

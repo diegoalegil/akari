@@ -42,7 +42,9 @@ export default async function KanjiDetailPage({ params }: { params: Promise<{ li
         {/* stroke order */}
         <div className="mx-auto w-full max-w-[320px]">
           {k.strokes.length > 0 ? (
-            <KanjiStrokes strokes={k.strokes} />
+            // key by literal so client nav between kanji remounts with fresh
+            // refs/state (correct stroke numbers + a replayed draw).
+            <KanjiStrokes key={k.literal} strokes={k.strokes} />
           ) : (
             <div className="surface grid aspect-square place-items-center">
               <span className="font-jp text-8xl text-[var(--color-fg)]">{k.literal}</span>

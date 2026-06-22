@@ -194,7 +194,17 @@ export async function buildDb(manifest: Manifest): Promise<Record<string, number
       const au = (FETCH_TATOEBA_AUDIO ? Number(tat.audio.has(b)) - Number(tat.audio.has(a)) : 0);
       return au || tat.jpById.get(a)!.length - tat.jpById.get(b)!.length;
     });
-    matches.slice(0, MAX_TATOEBA_PER_WORD).forEach((jpId, i) => {
+    // Dedupe by Japanese text before the cap: two distinct ids with identical
+    // text collapse to one sentence row (ensureSentence), which would otherwise
+    // silently cost the word an example via the (word_id,sentence_id) PK.
+    const seenText = new Set<string>();
+    const picks = matches.filter((id) => {
+      const t = tat.jpById.get(id)!;
+      if (seenText.has(t)) return false;
+      seenText.add(t);
+      return true;
+    }).slice(0, MAX_TATOEBA_PER_WORD);
+    picks.forEach((jpId, i) => {
       const engIds = tat.jpToEng.get(jpId)!;
       engIds.forEach((e) => neededEng.add(e)); // request ALL candidates; some ids may be deleted
       tatEngIds.set(jpId, engIds);
