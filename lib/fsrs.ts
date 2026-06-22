@@ -28,6 +28,36 @@ export function applyGrade(card: Card, rating: Grade, now: Date): RecordLogItem 
   return scheduler.next(card, now, rating);
 }
 
+export type Intervals = { again: string; hard: string; good: string; easy: string };
+
+/** Compact human interval, e.g. "10m", "1d", "3mes". */
+function fmtInterval(now: Date, due: Date): string {
+  const min = Math.max(1, Math.round((due.getTime() - now.getTime()) / 60000));
+  if (min < 60) return `${min}m`;
+  const hr = Math.round(min / 60);
+  if (hr < 24) return `${hr}h`;
+  const d = Math.round(hr / 24);
+  if (d < 31) return `${d}d`;
+  const mo = Math.round(d / 30);
+  if (mo < 12) return `${mo}mes`;
+  return `${(d / 365).toFixed(1)}a`;
+}
+
+/** The next-interval each grade would schedule, for the grade buttons. */
+export function previewIntervals(fsrsCardJson: string, now: Date): Intervals {
+  try {
+    const p = scheduler.repeat(reviveCard(fsrsCardJson), now);
+    return {
+      again: fmtInterval(now, p[Rating.Again].card.due),
+      hard: fmtInterval(now, p[Rating.Hard].card.due),
+      good: fmtInterval(now, p[Rating.Good].card.due),
+      easy: fmtInterval(now, p[Rating.Easy].card.due),
+    };
+  } catch {
+    return { again: "", hard: "", good: "", easy: "" };
+  }
+}
+
 /** Denormalized columns we mirror into card_state for queue queries. */
 export function cardColumns(card: Card) {
   return {

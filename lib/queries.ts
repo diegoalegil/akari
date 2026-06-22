@@ -89,7 +89,7 @@ export function getDashboard(): DashboardData {
     },
     dueNow: count(
       db,
-      "SELECT count(*) c FROM card_state WHERE introduced_at IS NOT NULL AND due IS NOT NULL AND due <= datetime('now')",
+      "SELECT count(*) c FROM card_state WHERE introduced_at IS NOT NULL AND due IS NOT NULL AND datetime(due) <= datetime('now')",
     ),
     newRemaining: Math.max(0, Math.min(newPerDay - introducedToday, notIntroduced)),
     reviewsToday: count(db, "SELECT count(*) c FROM review_log WHERE date(reviewed_at,'localtime') = date('now','localtime')"),
