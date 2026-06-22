@@ -17,9 +17,11 @@ export function Splash() {
     const t = setTimeout(() => setShow(false), ms);
     const skip = () => setShow(false);
     window.addEventListener("keydown", skip, { once: true });
+    window.addEventListener("pointerdown", skip, { once: true });
     return () => {
       clearTimeout(t);
       window.removeEventListener("keydown", skip);
+      window.removeEventListener("pointerdown", skip);
     };
   }, [reduce]);
 
@@ -62,6 +64,15 @@ export function Splash() {
               </motion.span>
             </div>
           </div>
+          <motion.button
+            onClick={() => setShow(false)}
+            className="absolute bottom-6 right-6 text-xs uppercase tracking-[0.2em] text-[var(--color-indigo)] opacity-60 transition hover:opacity-100"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.6 }}
+            transition={{ delay: 0.3, duration: 0.3 }}
+          >
+            Saltar
+          </motion.button>
         </motion.div>
       )}
     </AnimatePresence>

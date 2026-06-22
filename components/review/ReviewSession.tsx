@@ -16,29 +16,71 @@ const GRADES = [
   { g: 4, label: "Fácil", color: "var(--color-easy)", key: "4" },
 ] as const;
 
+// Audio button with playback state: announces pressed state, pulses while
+// playing, and degrades to a dormant "sin audio" chip if the clip 404s/errors.
 function Speaker({ src, label = "Reproducir audio", big = false }: { src: string; label?: string; big?: boolean }) {
   const ref = useRef<HTMLAudioElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    return (
+      <span
+        aria-label="Sin audio disponible"
+        title="Sin audio"
+        className={`inline-grid place-items-center rounded-full border border-dashed border-[var(--color-line)] text-[var(--color-fg-faint)] ${big ? "h-11 w-11" : "h-8 w-8"}`}
+      >
+        <svg width={big ? 18 : 14} height={big ? 18 : 14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M11 5 6 9H3v6h3l5 4V5Z" /><path d="m17 9 4 4M21 9l-4 4" />
+        </svg>
+      </span>
+    );
+  }
+
   return (
     <button
       type="button"
       aria-label={label}
+      aria-pressed={playing}
       onClick={() => {
         const a = ref.current;
         if (a) {
           a.currentTime = 0;
-          a.play().catch(() => {});
+          a.play().catch(() => setFailed(true));
         }
       }}
-      className={`inline-grid place-items-center rounded-full border border-[var(--color-line-strong)] text-[var(--color-fg-muted)] transition-colors hover:border-[var(--color-ember)] hover:text-[var(--color-ember)] ${big ? "h-11 w-11" : "h-8 w-8"}`}
+      className={`inline-grid place-items-center rounded-full border border-[var(--color-line-strong)] text-[var(--color-fg-muted)] transition-colors hover:border-[var(--color-ember)] hover:text-[var(--color-ember)] aria-pressed:border-[var(--color-ember)] aria-pressed:text-[var(--color-ember)] ${big ? "h-11 w-11" : "h-8 w-8"}`}
     >
-      <svg width={big ? 20 : 16} height={big ? 20 : 16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <motion.svg
+        width={big ? 20 : 16}
+        height={big ? 20 : 16}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+        animate={playing ? { scale: [1, 1.12, 1] } : { scale: 1 }}
+        transition={playing ? { duration: 0.6, repeat: Infinity } : { duration: 0.2 }}
+      >
         <path d="M11 5 6 9H3v6h3l5 4V5Z" />
         <path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" />
-      </svg>
-      <audio ref={ref} src={src} preload="none" />
+      </motion.svg>
+      <audio
+        ref={ref}
+        src={src}
+        preload="none"
+        onPlay={() => setPlaying(true)}
+        onEnded={() => setPlaying(false)}
+        onPause={() => setPlaying(false)}
+        onError={() => setFailed(true)}
+      />
     </button>
   );
 }
+
+const BLANK_INTERVALS = { again: "", hard: "", good: "", easy: "" };
 
 export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { cards: ReviewCard[]; autoplay?: boolean; cardAnim?: string }) {
   const router = useRouter();
@@ -47,13 +89,16 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { c
   const [idx, setIdx] = useState(0);
   const [revealed, setRevealed] = useState(false);
   const [pending, setPending] = useState(false);
+  const [saveError, setSaveError] = useState(false);
   const [done, setDone] = useState(0);
+  const [lastKey, setLastKey] = useState<string | null>(null);
   const startedAt = useRef<number>(Date.now());
   const correctRef = useRef(0);
   const wordAudioRef = useRef<HTMLAudioElement>(null);
 
   const finished = idx >= queue.length;
   const card = queue[idx];
+  const isFlip = cardAnim === "flip" && !reduce;
 
   const playWord = useCallback(() => {
     const a = wordAudioRef.current;
@@ -73,19 +118,30 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { c
     async (g: number) => {
       if (!revealed || pending || !card) return;
       setPending(true);
+      setSaveError(false);
       const elapsed = Date.now() - startedAt.current;
+      let res: { ok: boolean } | undefined;
       try {
-        await gradeCard(card.cardType, card.cardId, g as 1 | 2 | 3 | 4, elapsed);
-      } finally {
-        // "Otra vez" (Again) → re-queue the card so it returns this session.
-        if (g === 1) setQueue((q) => [...q, card]);
-        else correctRef.current += 1;
-        setDone((d) => d + 1);
-        setRevealed(false);
-        setPending(false);
-        startedAt.current = Date.now();
-        setIdx((i) => i + 1);
+        res = await gradeCard(card.cardType, card.cardId, g as 1 | 2 | 3 | 4, elapsed);
+      } catch {
+        res = { ok: false };
       }
+      // Only advance once the grade is actually persisted — otherwise the card
+      // would silently leave the session while SRS state stayed untouched.
+      if (!res?.ok) {
+        setPending(false);
+        setSaveError(true);
+        return;
+      }
+      // "Otra vez" (Again) → re-queue this session, blanking the now-stale
+      // interval preview (it was computed from the pre-lapse FSRS state).
+      if (g === 1) setQueue((q) => [...q, { ...card, intervals: { ...BLANK_INTERVALS } }]);
+      else correctRef.current += 1;
+      setDone((d) => d + 1);
+      setRevealed(false);
+      setPending(false);
+      startedAt.current = Date.now();
+      setIdx((i) => i + 1);
     },
     [revealed, pending, card],
   );
@@ -101,6 +157,9 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { c
         reveal();
       } else if (revealed && ["1", "2", "3", "4"].includes(e.key)) {
         e.preventDefault();
+        // Mirror a tap: briefly pulse the matching grade cell.
+        setLastKey(e.key);
+        setTimeout(() => setLastKey(null), 150);
         void grade(Number(e.key));
       } else if (e.key.toLowerCase() === "j") {
         playWord();
@@ -112,7 +171,12 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { c
 
   if (finished) {
     return (
-      <div className="fixed inset-0 z-40 grid place-items-center bg-[var(--color-ink)] px-6">
+      <motion.div
+        className="fixed inset-0 z-40 grid place-items-center bg-[var(--color-ink)] px-6"
+        initial={reduce ? false : { opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.25, ease: EASE }}
+      >
         <div className="flex flex-col items-center gap-5 text-center">
           <Lantern size={72} />
           <h1 className="text-2xl font-semibold tracking-tight">¡Sesión completa!</h1>
@@ -127,14 +191,32 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { c
             Volver al inicio
           </button>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
   const progress = queue.length ? (done / queue.length) * 100 : 0;
+  const headLabel = `${card.expression} — ${card.reading} — ${card.meaning}`;
+
+  // Card back content (reading + meaning + audio), shared by both flip modes.
+  const Back = (
+    <>
+      <div lang="ja" aria-label={headLabel} className="font-jp text-4xl font-medium leading-tight text-[var(--color-fg)] sm:text-5xl">{card.expression}</div>
+      <div className="flex items-center gap-3">
+        <span lang="ja" aria-hidden className="font-jp text-xl text-[var(--color-ember)]">{card.reading}</span>
+        {card.audio && <Speaker src={`/${card.audio}`} label="Pronunciación" />}
+      </div>
+      <p aria-hidden className="max-w-md text-pretty text-lg text-[var(--color-fg)]">{card.meaning}</p>
+    </>
+  );
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col bg-[var(--color-ink)]">
+    <motion.div
+      className="fixed inset-0 z-40 flex flex-col bg-[var(--color-ink)]"
+      initial={reduce ? false : { opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.22, ease: EASE }}
+    >
       {/* top bar */}
       <header className="flex items-center gap-3 px-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
         <button onClick={() => router.push("/")} aria-label="Salir de la sesión" className="grid h-9 w-9 place-items-center rounded-lg text-[var(--color-fg-muted)] transition-colors hover:text-[var(--color-fg)]">
@@ -168,35 +250,52 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { c
                 nueva
               </span>
             )}
-            <AnimatePresence mode="wait" initial={false}>
-              {!revealed ? (
-                <motion.div
-                  key="front"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1, rotateY: 0 }}
-                  exit={reduce ? { opacity: 0 } : { opacity: 0, rotateY: cardAnim === "flip" ? -90 : -8 }}
-                  transition={{ duration: reduce ? 0.05 : 0.18, ease: EASE }}
-                >
-                  <div lang="ja" className="font-jp text-5xl font-medium leading-tight text-[var(--color-fg)] sm:text-6xl">{card.expression}</div>
-                  <p className="mt-6 text-sm text-[var(--color-fg-faint)]">Toca para mostrar · espacio</p>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="back"
-                  initial={reduce ? { opacity: 0 } : { opacity: 0, rotateY: cardAnim === "flip" ? 90 : 8 }}
-                  animate={{ opacity: 1, rotateY: 0 }}
-                  transition={{ duration: reduce ? 0.05 : cardAnim === "flip" ? 0.3 : 0.22, ease: EASE }}
-                  className="flex flex-col items-center gap-3"
-                >
-                  <div lang="ja" className="font-jp text-4xl font-medium leading-tight text-[var(--color-fg)] sm:text-5xl">{card.expression}</div>
-                  <div className="flex items-center gap-3">
-                    <span lang="ja" className="font-jp text-xl text-[var(--color-ember)]">{card.reading}</span>
-                    {card.audio && <Speaker src={`/${card.audio}`} label="Pronunciación" />}
+
+            {isFlip ? (
+              // True 3D flip: one persistent preserve-3d wrapper with two
+              // backface-hidden faces rotating together.
+              <motion.div
+                className="relative grid min-h-[210px] [transform-style:preserve-3d]"
+                initial={false}
+                animate={{ rotateY: revealed ? 180 : 0 }}
+                transition={{ duration: 0.5, ease: EASE }}
+              >
+                <div className="col-start-1 row-start-1 grid place-items-center [backface-visibility:hidden]" aria-hidden={revealed}>
+                  <div>
+                    <div lang="ja" className="font-jp text-5xl font-medium leading-tight text-[var(--color-fg)] sm:text-6xl">{card.expression}</div>
+                    <p className="mt-6 text-sm text-[var(--color-fg-faint)]">Toca para mostrar · espacio</p>
                   </div>
-                  <p className="max-w-md text-pretty text-lg text-[var(--color-fg)]">{card.meaning}</p>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                </div>
+                <div className="col-start-1 row-start-1 flex flex-col items-center justify-center gap-3 [backface-visibility:hidden] [transform:rotateY(180deg)]" aria-hidden={!revealed}>
+                  {Back}
+                </div>
+              </motion.div>
+            ) : (
+              <AnimatePresence mode="wait" initial={false}>
+                {!revealed ? (
+                  <motion.div
+                    key="front"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1, rotateY: 0 }}
+                    exit={reduce ? { opacity: 0 } : { opacity: 0, rotateY: -8 }}
+                    transition={{ duration: reduce ? 0.05 : 0.18, ease: EASE }}
+                  >
+                    <div lang="ja" className="font-jp text-5xl font-medium leading-tight text-[var(--color-fg)] sm:text-6xl">{card.expression}</div>
+                    <p className="mt-6 text-sm text-[var(--color-fg-faint)]">Toca para mostrar · espacio</p>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="back"
+                    initial={reduce ? { opacity: 0 } : { opacity: 0, rotateY: 8 }}
+                    animate={{ opacity: 1, rotateY: 0 }}
+                    transition={{ duration: reduce ? 0.05 : 0.22, ease: EASE }}
+                    className="flex flex-col items-center gap-3"
+                  >
+                    {Back}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            )}
           </div>
 
           {/* extras after reveal */}
@@ -224,7 +323,7 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { c
                   <div className="flex flex-wrap gap-2">
                     {card.kanji.map((k) => (
                       <span key={k.literal} className="inline-flex items-center gap-2 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface-2)] px-3 py-1.5">
-                        <span className="font-jp text-lg text-[var(--color-fg)]">{k.literal}</span>
+                        <span lang="ja" className="font-jp text-lg text-[var(--color-fg)]">{k.literal}</span>
                         <span className="text-xs text-[var(--color-fg-muted)]">{k.meanings.join(", ")}</span>
                       </span>
                     ))}
@@ -242,6 +341,11 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { c
       {/* actions (thumb zone) */}
       <footer className="px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
         <div className="mx-auto w-full max-w-xl">
+          {saveError && (
+            <p role="alert" className="mb-2 text-center text-sm text-[var(--color-again)]">
+              No se pudo guardar tu repaso. Inténtalo de nuevo.
+            </p>
+          )}
           {!revealed ? (
             <button
               onClick={reveal}
@@ -252,22 +356,24 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { c
           ) : (
             <div className="grid grid-cols-4 gap-2">
               {GRADES.map((b) => (
-                <button
+                <motion.button
                   key={b.g}
                   disabled={pending}
                   onClick={() => grade(b.g)}
-                  className="relative flex flex-col items-center gap-0.5 rounded-xl border py-2.5 transition-[transform,background-color] duration-[var(--motion-fast)] hover:bg-[color-mix(in_oklab,var(--btn)_14%,transparent)] active:scale-[0.97] disabled:opacity-50"
+                  animate={lastKey === b.key ? { scale: 0.94 } : { scale: 1 }}
+                  transition={{ duration: 0.12, ease: EASE }}
+                  className="relative flex flex-col items-center gap-0.5 rounded-xl border py-2.5 transition-[background-color] duration-[var(--motion-fast)] hover:bg-[color-mix(in_oklab,var(--btn)_14%,transparent)] active:scale-[0.97] disabled:opacity-50"
                   style={{ borderColor: "color-mix(in oklab, var(--btn) 45%, transparent)", ["--btn" as string]: b.color }}
                 >
                   <span className="absolute right-1.5 top-1 hidden rounded border border-[var(--color-line)] px-1 text-[10px] text-[var(--color-fg-faint)] sm:block">{b.key}</span>
                   <span className="text-sm font-medium" style={{ color: b.color }}>{b.label}</span>
                   <span className="text-[11px] tabular-nums text-[var(--color-fg-faint)]">{card.intervals[["again", "hard", "good", "easy"][b.g - 1] as keyof ReviewCard["intervals"]]}</span>
-                </button>
+                </motion.button>
               ))}
             </div>
           )}
         </div>
       </footer>
-    </div>
+    </motion.div>
   );
 }

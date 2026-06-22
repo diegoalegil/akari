@@ -32,17 +32,19 @@ export type DrillMode = "recognition" | "recall";
 export function KanaDrill({ items, mode, title }: { items: KanaQueueItem[]; mode: DrillMode; title: string }) {
   const router = useRouter();
   const reduce = useReducedMotion();
+  const [queue, setQueue] = useState(items);
   const [idx, setIdx] = useState(0);
   const [revealed, setRevealed] = useState(false);
   const [pending, setPending] = useState(false);
+  const [saveError, setSaveError] = useState(false);
   const [done, setDone] = useState(0);
   const [typed, setTyped] = useState("");
   const [wasCorrect, setWasCorrect] = useState<boolean | null>(null);
   const startedAt = useRef<number>(Date.now());
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const finished = idx >= items.length;
-  const item = items[idx];
+  const finished = idx >= queue.length;
+  const item = queue[idx];
   // Recognition shows the kana and asks for its romaji — typeable on a Latin
   // keyboard, so we turn it into active recall instead of passive reveal.
   const typedMode = mode === "recognition";
@@ -57,17 +59,27 @@ export function KanaDrill({ items, mode, title }: { items: KanaQueueItem[]; mode
     async (g: number) => {
       if (!revealed || pending || !item) return;
       setPending(true);
+      setSaveError(false);
+      let res: { ok: boolean } | undefined;
       try {
-        await gradeCard("kana", item.id, g as 1 | 2 | 3 | 4, Date.now() - startedAt.current);
-      } finally {
-        setDone((d) => d + 1);
-        setRevealed(false);
-        setPending(false);
-        setTyped("");
-        setWasCorrect(null);
-        startedAt.current = Date.now();
-        setIdx((i) => i + 1);
+        res = await gradeCard("kana", item.id, g as 1 | 2 | 3 | 4, Date.now() - startedAt.current);
+      } catch {
+        res = { ok: false };
       }
+      // Only advance once the grade actually persisted.
+      if (!res?.ok) {
+        setPending(false);
+        setSaveError(true);
+        return;
+      }
+      if (g === 1) setQueue((q) => [...q, item]);
+      setDone((d) => d + 1);
+      setRevealed(false);
+      setPending(false);
+      setTyped("");
+      setWasCorrect(null);
+      startedAt.current = Date.now();
+      setIdx((i) => i + 1);
     },
     [revealed, pending, item],
   );
@@ -102,7 +114,7 @@ export function KanaDrill({ items, mode, title }: { items: KanaQueueItem[]; mode
         <div className="flex flex-col items-center gap-5 text-center">
           <Lantern size={64} />
           <h1 className="text-2xl font-semibold tracking-tight">¡Drill completo!</h1>
-          <p className="text-[var(--color-fg-muted)]">{done} kana repasados. Continuará…</p>
+          <p className="text-[var(--color-fg-muted)]">{done} kana {done === 1 ? "repasado" : "repasados"}. Continuará…</p>
           <button onClick={() => router.push("/kana")} className="mt-2 rounded-xl bg-gradient-to-r from-[var(--color-akari)] to-[var(--color-ember)] px-5 py-2.5 font-semibold text-[var(--color-ink-deep)] shadow-[var(--akari-glow)] transition-[filter] hover:brightness-105">
             Volver
           </button>
@@ -111,7 +123,7 @@ export function KanaDrill({ items, mode, title }: { items: KanaQueueItem[]; mode
     );
   }
 
-  const progress = (done / items.length) * 100;
+  const progress = (done / queue.length) * 100;
   const prompt = mode === "recognition" ? item.char : item.romaji;
   const answer = mode === "recognition" ? item.romaji : item.char;
   const promptJp = mode === "recognition";
@@ -128,7 +140,7 @@ export function KanaDrill({ items, mode, title }: { items: KanaQueueItem[]; mode
             <motion.div className="h-full rounded-full bg-gradient-to-r from-[var(--color-ember)] to-[var(--color-akari)]" initial={false} animate={{ width: `${progress}%` }} transition={{ duration: reduce ? 0 : 0.3, ease: EASE }} />
           </div>
         </div>
-        <span className="text-xs tabular-nums text-[var(--color-fg-faint)]">{done}/{items.length}</span>
+        <span className="text-xs tabular-nums text-[var(--color-fg-faint)]">{done}/{queue.length}</span>
       </header>
 
       <main className="flex flex-1 items-center justify-center px-4">
@@ -181,6 +193,11 @@ export function KanaDrill({ items, mode, title }: { items: KanaQueueItem[]; mode
 
       <footer className="px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
         <div className="mx-auto w-full max-w-md">
+          {saveError && (
+            <p role="alert" className="mb-2 text-center text-sm text-[var(--color-again)]">
+              No se pudo guardar. Inténtalo de nuevo.
+            </p>
+          )}
           {!revealed ? (
             <button onClick={typedMode ? submitTyped : reveal} className="w-full rounded-xl border border-[var(--color-line-strong)] bg-[var(--color-surface-2)] py-3.5 font-medium text-[var(--color-fg)] transition-colors hover:border-[var(--color-indigo)]">
               {typedMode ? "Comprobar" : "Mostrar respuesta"}

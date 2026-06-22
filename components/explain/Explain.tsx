@@ -15,6 +15,7 @@ export function Explain({ context, label = "Explícame" }: { context: ExplainCon
   const startedRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const ask = useCallback(
     async (question?: string) => {
@@ -68,7 +69,10 @@ export function Explain({ context, label = "Explícame" }: { context: ExplainCon
     if (!open) return;
     inputRef.current?.focus();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -77,6 +81,7 @@ export function Explain({ context, label = "Explícame" }: { context: ExplainCon
   return (
     <>
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => {
           setHistory([]);
@@ -103,7 +108,7 @@ export function Explain({ context, label = "Explícame" }: { context: ExplainCon
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ duration: 0.26, ease: EASE }}
-              className="flex h-full w-full max-w-md flex-col border-l border-[color-mix(in_oklab,var(--color-indigo)_30%,transparent)] bg-[var(--color-surface)]"
+              className="flex h-full w-full max-w-md flex-col border border-dotted border-[color-mix(in_oklab,var(--color-indigo)_45%,transparent)] bg-[color-mix(in_oklab,var(--color-indigo)_8%,var(--color-surface))]"
               style={{ boxShadow: "-8px 0 40px -12px rgba(0,0,0,0.5)" }}
             >
               <header className="flex items-center gap-3 border-b border-[var(--color-line)] px-5 pt-[max(0.9rem,env(safe-area-inset-top))] pb-3">
@@ -121,8 +126,8 @@ export function Explain({ context, label = "Explícame" }: { context: ExplainCon
 
               <div ref={scrollRef} className="flex flex-1 flex-col gap-3 overflow-y-auto px-5 py-4">
                 <div className="rounded-lg border border-dashed border-[color-mix(in_oklab,var(--color-indigo)_30%,transparent)] bg-[color-mix(in_oklab,var(--color-indigo)_8%,transparent)] px-3 py-2 text-sm">
-                  <span className="font-jp text-[var(--color-fg)]">{context.expression}</span>
-                  {context.reading && <span className="font-jp ml-2 text-[var(--color-fg-muted)]">{context.reading}</span>}
+                  <span lang="ja" className="font-jp text-[var(--color-fg)]">{context.expression}</span>
+                  {context.reading && <span lang="ja" className="font-jp ml-2 text-[var(--color-fg-muted)]">{context.reading}</span>}
                   {context.meaning && <span className="ml-2 text-[var(--color-fg-faint)]">· {context.meaning}</span>}
                 </div>
                 {history.map((t, i) => (
@@ -150,10 +155,11 @@ export function Explain({ context, label = "Explícame" }: { context: ExplainCon
                   ref={inputRef}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
+                  aria-label="Repregunta a Sensei"
                   placeholder="Repregunta a Sensei…"
                   className="flex-1 rounded-xl border border-[var(--color-line-strong)] bg-[var(--color-surface-2)] px-3 py-2 text-sm text-[var(--color-fg)] placeholder:text-[var(--color-fg-faint)] focus:outline-none"
                 />
-                <button type="submit" disabled={streaming || !input.trim()} className="grid h-9 w-9 place-items-center rounded-xl bg-[var(--color-indigo)] text-white transition-opacity disabled:opacity-40">
+                <button type="submit" aria-label="Enviar" disabled={streaming || !input.trim()} className="grid h-9 w-9 place-items-center rounded-xl bg-[var(--color-indigo)] text-white transition-opacity disabled:opacity-40">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" /></svg>
                 </button>
               </form>
