@@ -4,6 +4,8 @@ import { Reveal } from "@/components/Reveal";
 import { StatCard } from "@/components/StatCard";
 import { getDashboard } from "@/lib/queries";
 
+export const dynamic = "force-dynamic";
+
 function greeting(): string {
   const h = new Date().getHours();
   if (h < 6) return "Buenas noches";

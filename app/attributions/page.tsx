@@ -2,6 +2,7 @@ import { Lantern } from "@/components/Lantern";
 import { getIngestMeta } from "@/lib/queries";
 
 export const metadata = { title: "Créditos" };
+export const dynamic = "force-dynamic";
 
 type Source = { name: string; use: string; license: string; href: string; versionKey?: string };
 
