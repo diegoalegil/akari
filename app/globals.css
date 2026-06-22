@@ -1,51 +1,165 @@
 @import "tailwindcss";
 
-/* ── Akari design tokens (dark, "anime-but-refined") ──────────────────────────
-   Foundation only; the full design language lives in DESIGN.md (Phase 2). */
+/* ══ Akari design tokens — dark, "anime-but-refined", lantern soul ══════════
+   Canonical values per DESIGN.md: one warm light source, one cool focus
+   language, no pure black/white, hairline dividers, a fixed motion contract. */
 @theme {
-  /* Ink / surfaces */
+  /* Ink & surfaces — warm-tinted, never pure black; depth from light */
   --color-ink: #0e0f13;
+  --color-ink-deep: #0b0c0f;
   --color-surface: #16181f;
-  --color-surface-2: #1d2029;
-  --color-line: #2a2e3a;
+  --color-surface-2: #1b1e27;
+  --color-surface-3: #232733;
+  --color-line: rgba(255, 255, 255, 0.06); /* hairline divider */
+  --color-line-strong: #2a2e3a;
 
-  /* Text */
-  --color-fg: #eceef5;
-  --color-fg-muted: #9aa0b0;
-  --color-fg-faint: #5b6173;
+  /* Text — warm off-white */
+  --color-fg: #f4f1ec;
+  --color-fg-muted: #aab0bd;
+  --color-fg-faint: #6b7180;
 
-  /* Lantern accents (the "akari" signature) */
+  /* Two light languages: warm = brand/ambient/reward, cool = focus/AI */
   --color-akari: #ff7e9d; /* sakura */
   --color-ember: #f2b66b; /* warm glow */
-  --color-indigo-night: #6c7bff; /* focus / state */
+  --color-indigo: #6c7bff; /* focus / active / AI */
 
-  /* Semantic grades (muted, never garish) */
+  /* Semantic grades — muted, never garish */
   --color-again: #e06a6a;
-  --color-hard: #d9a35b;
-  --color-good: #7bbf8f;
-  --color-easy: #5fb3c9;
+  --color-hard: #e0a95b;
+  --color-good: #74c49a;
+  --color-easy: #5fb8d6;
 
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-jp: "Zen Kaku Gothic New", "Noto Sans JP", var(--font-sans);
+  --font-sans: var(--font-inter), "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-jp: "Zen Kaku Gothic New", "Hiragino Sans", "Hiragino Kaku Gothic ProN",
+    "Yu Gothic", "Noto Sans JP", var(--font-sans);
+
+  --radius: 0.875rem;
+
+  /* Motion contract — durations + easings come ONLY from these */
+  --motion-fast: 120ms;
+  --motion-base: 180ms;
+  --motion-slow: 220ms;
+  --ease-akari: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-akari-out: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+:root {
+  /* One global light source. Components reference these, never author warm
+     shadows off-token. Brightness hard-capped low so glow blooms, never neons. */
+  --glow-warm: radial-gradient(
+    closest-side,
+    color-mix(in oklab, var(--color-ember) 14%, transparent),
+    color-mix(in oklab, var(--color-akari) 6%, transparent) 70%,
+    transparent
+  );
+  --akari-glow: 0 8px 40px -8px color-mix(in oklab, var(--color-ember) 40%, transparent);
+}
+
+/* ══ Base ═══════════════════════════════════════════════════════════════════ */
 html,
 body {
-  background: var(--color-ink);
-  color: var(--color-fg);
+  /* "light comes from up here" — one shared top→bottom ink ramp */
+  background: linear-gradient(180deg, var(--color-surface) 0%, var(--color-ink) 55%, var(--color-ink-deep) 100%);
+  background-attachment: fixed;
+  color: color-mix(in oklab, var(--color-fg) 72%, transparent);
 }
-
 body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+::selection {
+  background: color-mix(in oklab, var(--color-akari) 35%, transparent);
+  color: var(--color-fg);
 }
 
-/* Respect reduced-motion globally; per-component motion still opts in. */
+/* Cool focus language: indigo ring + soft halo as box-shadow (no layout shift) */
+:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--color-indigo),
+    0 0 0 6px color-mix(in oklab, var(--color-indigo) 18%, transparent);
+  border-radius: 6px;
+}
+
+/* Slim, unobtrusive scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-surface-3) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--color-surface-3);
+  border-radius: 99px;
+  border: 2px solid var(--color-ink);
+}
+
+/* ══ Helpers ════════════════════════════════════════════════════════════════ */
+.font-jp {
+  font-family: var(--font-jp);
+}
+
+/* The lantern glow — a soft warm bloom. Use sparingly; it's the signature. */
+.glow-ember {
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--color-ember) 20%, transparent),
+    0 8px 40px -8px color-mix(in oklab, var(--color-ember) 45%, transparent);
+}
+.glow-akari {
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--color-akari) 20%, transparent),
+    0 8px 40px -8px color-mix(in oklab, var(--color-akari) 45%, transparent);
+}
+.text-glow {
+  text-shadow: 0 0 24px color-mix(in oklab, var(--color-ember) 55%, transparent);
+}
+
+/* Hairline card surface */
+.surface {
+  background: linear-gradient(180deg, var(--color-surface-2), var(--color-surface));
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius);
+}
+
+/* A faint ambient lantern wash behind hero content */
+.ambient-lantern {
+  background:
+    radial-gradient(60% 50% at 50% 0%, color-mix(in oklab, var(--color-ember) 12%, transparent), transparent 70%),
+    radial-gradient(45% 40% at 85% 10%, color-mix(in oklab, var(--color-akari) 9%, transparent), transparent 70%);
+}
+
+/* ══ Motion ═════════════════════════════════════════════════════════════════ */
+@keyframes flame-breathe {
+  0%, 100% { opacity: 0.85; transform: scaleY(1) translateY(0); }
+  50% { opacity: 1; transform: scaleY(1.06) translateY(-1px); }
+}
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 0.9; }
+}
+@keyframes shimmer {
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-2) 25%,
+    color-mix(in oklab, var(--color-ember) 8%, var(--color-surface-3)) 50%,
+    var(--color-surface-2) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }
