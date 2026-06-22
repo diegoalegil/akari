@@ -28,7 +28,7 @@ export default async function KanaPage({ searchParams }: { searchParams: Promise
   return (
     <div className="mx-auto max-w-2xl px-5 py-8 md:px-8 md:py-12">
       <div className="flex items-center gap-3">
-        <span className="font-jp text-3xl text-[var(--color-fg-faint)]">あ</span>
+        <span aria-hidden="true" className="font-jp text-3xl text-[var(--color-fg-faint)]">あ</span>
         <h1 className="text-2xl font-semibold tracking-tight">Entrenador de kana</h1>
       </div>
 
@@ -56,7 +56,7 @@ export default async function KanaPage({ searchParams }: { searchParams: Promise
             href={`/kana/drill?script=${script}&mode=recall`}
             className="rounded-xl border border-[var(--color-line-strong)] px-4 py-2.5 text-sm font-medium text-[var(--color-fg)] transition-colors hover:border-[var(--color-indigo)]"
           >
-            Escritura (recall)
+            Practicar escritura
           </Link>
         </div>
       </section>

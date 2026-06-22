@@ -37,6 +37,7 @@ export function SearchClient() {
           ref={inputRef}
           value={q}
           onChange={(e) => setQ(e.target.value)}
+          aria-label="Buscar"
           placeholder="Busca una palabra, lectura, kanji o significado…"
           className="flex-1 bg-transparent text-[var(--color-fg)] placeholder:text-[var(--color-fg-faint)] focus:outline-none"
         />
@@ -48,7 +49,7 @@ export function SearchClient() {
           <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-5">
             {res.kanji.map((k) => (
               <Link key={k.literal} href={`/kanji/${encodeURIComponent(k.literal)}`} className="surface group flex flex-col items-center gap-1 p-3 transition-colors hover:border-[var(--color-line-strong)]">
-                <span className="font-jp text-3xl text-[var(--color-fg)] group-hover:text-[var(--color-ember)]">{k.literal}</span>
+                <span lang="ja" className="font-jp text-3xl text-[var(--color-fg)] group-hover:text-[var(--color-ember)]">{k.literal}</span>
                 <span className="line-clamp-1 w-full text-center text-[11px] text-[var(--color-fg-faint)]">{k.meaning}</span>
               </Link>
             ))}
@@ -63,8 +64,8 @@ export function SearchClient() {
             {res.words.map((w, i) => (
               <li key={w.expression + i} className="flex items-center justify-between gap-4 px-5 py-3">
                 <div>
-                  <span className="font-jp text-lg text-[var(--color-fg)]">{w.expression}</span>
-                  <span className="font-jp ml-2 text-sm text-[var(--color-ember)]">{w.reading}</span>
+                  <span lang="ja" className="font-jp text-lg text-[var(--color-fg)]">{w.expression}</span>
+                  <span lang="ja" className="font-jp ml-2 text-sm text-[var(--color-ember)]">{w.reading}</span>
                 </div>
                 <span className="max-w-[50%] truncate text-right text-sm text-[var(--color-fg-muted)]">{w.meaning}</span>
               </li>

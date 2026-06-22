@@ -12,6 +12,7 @@ export function KanjiStrokes({ strokes, size = 300 }: { strokes: string[]; size?
   const [playing, setPlaying] = useState(false);
   const [nums, setNums] = useState<{ x: number; y: number }[]>([]);
   const didAutoPlay = useRef(false);
+  const strokeNoun = strokes.length === 1 ? "trazo" : "trazos";
 
   const play = useCallback(() => {
     if (reduce || playing) return;
@@ -60,7 +61,7 @@ export function KanjiStrokes({ strokes, size = 300 }: { strokes: string[]; size?
   return (
     <div className="flex flex-col items-center gap-3">
       <div className="surface ambient-lantern relative grid aspect-square w-full place-items-center overflow-hidden" style={{ maxWidth: size }}>
-        <svg viewBox="0 0 109 109" width="86%" height="86%" role="img" aria-label={`Orden de trazos (${strokes.length} trazos)`}>
+        <svg viewBox="0 0 109 109" width="86%" height="86%" role="img" aria-label={`Orden de trazos (${strokes.length} ${strokeNoun})`}>
           {/* faint ghost of the full glyph */}
           <g stroke="var(--color-line-strong)" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" opacity="0.22">
             {strokes.map((d, i) => (
@@ -116,7 +117,7 @@ export function KanjiStrokes({ strokes, size = 300 }: { strokes: string[]; size?
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" />
           </svg>
-          Reproducir · {strokes.length} trazos
+          Reproducir · {strokes.length} {strokeNoun}
         </button>
       )}
     </div>

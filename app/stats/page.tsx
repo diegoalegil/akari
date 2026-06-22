@@ -49,7 +49,7 @@ export default function StatsPage() {
         <div className="mt-4 overflow-x-auto pb-1">
           <div className="grid grid-flow-col grid-rows-7 gap-[3px]" style={{ width: "max-content" }}>
             {s.heatmap.map((d) => (
-              <div key={d.date} title={`${d.date}: ${d.count}`} className="h-3 w-3 rounded-[3px]" style={{ background: heatColor(d.count, s.heatmapMax) }} />
+              <div key={d.date} role="img" aria-label={`${d.date}: ${d.count} ${d.count === 1 ? "repaso" : "repasos"}`} title={`${d.date}: ${d.count}`} className="h-3 w-3 rounded-[3px]" style={{ background: heatColor(d.count, s.heatmapMax) }} />
             ))}
           </div>
         </div>
@@ -92,7 +92,7 @@ export default function StatsPage() {
           <h2 className="mt-0.5 font-medium text-[var(--color-fg)]">Vencen en 14 días</h2>
           <div className="mt-5 flex h-32 items-end gap-1.5">
             {s.forecast.map((f, i) => (
-              <div key={f.date} className="flex flex-1 flex-col items-center justify-end" title={`${f.date}: ${f.count}`}>
+              <div key={f.date} role="img" aria-label={`${f.date}: ${f.count} ${f.count === 1 ? "repaso" : "repasos"}`} className="flex flex-1 flex-col items-center justify-end" title={`${f.date}: ${f.count}`}>
                 <div
                   className="w-full rounded-t-[3px]"
                   style={{ height: `${(f.count / fcMax) * 100}%`, minHeight: f.count ? 4 : 2, background: i === 0 ? "var(--color-akari)" : "color-mix(in oklab, var(--color-indigo) 70%, transparent)" }}

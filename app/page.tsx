@@ -48,7 +48,7 @@ export default function Home() {
       {/* Hero — today's session */}
       <Reveal delay={0.04}>
         <section className="surface ambient-lantern relative mt-3 overflow-hidden p-7 md:p-9">
-          <span className="font-jp pointer-events-none absolute -right-8 -top-14 select-none text-[13rem] leading-none text-white/[0.03]">
+          <span aria-hidden="true" className="font-jp pointer-events-none absolute -right-8 -top-14 select-none text-[13rem] leading-none text-white/[0.03]">
             灯
           </span>
           <h1 className="text-xl font-medium text-[var(--color-fg-muted)]">Tu sesión de hoy</h1>
@@ -58,14 +58,14 @@ export default function Home() {
               <div className="mt-5 flex items-end gap-7">
                 <div>
                   <div className="text-glow text-6xl font-semibold leading-none tracking-tight text-[var(--color-fg)]">{ready}</div>
-                  <div className="mt-2 text-sm text-[var(--color-fg-muted)]">tarjetas listas</div>
+                  <div className="mt-2 text-sm text-[var(--color-fg-muted)]">{ready === 1 ? "tarjeta lista" : "tarjetas listas"}</div>
                 </div>
                 <ul className="mb-1 space-y-1 text-sm text-[var(--color-fg-muted)]">
                   <li>
-                    <span className="text-[var(--color-fg)]">{d.dueNow}</span> repasos vencidos
+                    <span className="text-[var(--color-fg)]">{d.dueNow}</span> {d.dueNow === 1 ? "repaso vencido" : "repasos vencidos"}
                   </li>
                   <li>
-                    <span className="text-[var(--color-fg)]">{d.newRemaining}</span> palabras nuevas
+                    <span className="text-[var(--color-fg)]">{d.newRemaining}</span> {d.newRemaining === 1 ? "palabra nueva" : "palabras nuevas"}
                   </li>
                 </ul>
               </div>
@@ -89,8 +89,8 @@ export default function Home() {
           <div className="mt-5 flex gap-2.5 overflow-x-auto pb-1">
             {d.recentKanji.map((k) => (
               <Link key={k.literal} href={`/kanji/${encodeURIComponent(k.literal)}`} className="surface flex min-w-[72px] flex-col items-center gap-1 px-4 py-3 transition-colors hover:border-[var(--color-line-strong)]">
-                <span className="font-jp text-2xl text-[var(--color-fg)]">{k.literal}</span>
-                <span className="font-jp text-[11px] text-[var(--color-fg-faint)]">{k.reading}</span>
+                <span lang="ja" className="font-jp text-2xl text-[var(--color-fg)]">{k.literal}</span>
+                <span lang="ja" className="font-jp text-[11px] text-[var(--color-fg-faint)]">{k.reading}</span>
               </Link>
             ))}
             <Link href="/kanji" className="surface flex min-w-[72px] flex-col items-center justify-center gap-0.5 border-dashed px-4 py-3 text-[var(--color-fg-faint)] transition-colors hover:text-[var(--color-fg)]">
@@ -114,7 +114,7 @@ export default function Home() {
           </div>
         </Reveal>
         <Reveal delay={0.12}>
-          <StatCard label="reseñas hoy" value={d.reviewsToday} glyph="今" accent="var(--color-indigo)" />
+          <StatCard label="vistas hoy" value={d.reviewsToday} glyph="今" accent="var(--color-indigo)" />
         </Reveal>
         <Reveal delay={0.16}>
           <StatCard label="vocabulario" value={NF.format(d.totals.words)} glyph="語" accent="var(--color-easy)" />
@@ -132,7 +132,7 @@ export default function Home() {
               <div className="font-medium text-[var(--color-fg)]">Entrenador de kana</div>
               <div className="text-sm text-[var(--color-fg-muted)]">{d.totals.kana} hiragana + katakana</div>
             </div>
-            <span className="font-jp text-3xl text-[var(--color-fg-faint)] transition-colors group-hover:text-[var(--color-akari)]">
+            <span lang="ja" className="font-jp text-3xl text-[var(--color-fg-faint)] transition-colors group-hover:text-[var(--color-akari)]">
               あ
             </span>
           </Link>
@@ -141,7 +141,7 @@ export default function Home() {
               <div className="font-medium text-[var(--color-fg)]">Explorar kanji</div>
               <div className="text-sm text-[var(--color-fg-muted)]">trazos, lecturas y JLPT</div>
             </div>
-            <span className="font-jp text-3xl text-[var(--color-fg-faint)] transition-colors group-hover:text-[var(--color-ember)]">
+            <span lang="ja" className="font-jp text-3xl text-[var(--color-fg-faint)] transition-colors group-hover:text-[var(--color-ember)]">
               字
             </span>
           </Link>

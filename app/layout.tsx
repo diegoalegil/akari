@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Nav } from "@/components/Nav";
@@ -12,6 +12,8 @@ export const metadata: Metadata = {
   title: { default: "Akari 灯 — Japonés", template: "%s · Akari" },
   description: "App personal de japonés con SRS (FSRS). Contenido 100% de datasets validados.",
 };
+
+export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover" };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const { theme, reducedMotion } = getSettings();

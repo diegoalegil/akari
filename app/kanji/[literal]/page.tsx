@@ -33,12 +33,12 @@ export default async function KanjiDetailPage({ params }: { params: Promise<{ li
         <span className="text-xs uppercase tracking-wider text-[var(--color-fg-faint)]">Kanji · 字典</span>
         {k.next && (
           <Link href={`/kanji/${encodeURIComponent(k.next)}`} className="rounded-lg border border-[var(--color-line-strong)] px-3 py-1.5 text-sm text-[var(--color-fg-muted)] transition-colors hover:border-[var(--color-indigo)] hover:text-[var(--color-fg)]">
-            Ver <span className="font-jp">{k.next}</span> →
+            Ver <span lang="ja" className="font-jp">{k.next}</span> →
           </Link>
         )}
       </div>
 
-      <div className="mt-5 grid gap-7 md:grid-cols-[320px_1fr]">
+      <div className="mt-5 grid gap-7 lg:grid-cols-[320px_1fr]">
         {/* stroke order */}
         <div className="mx-auto w-full max-w-[320px]">
           {k.strokes.length > 0 ? (
@@ -47,7 +47,7 @@ export default async function KanjiDetailPage({ params }: { params: Promise<{ li
             <KanjiStrokes key={k.literal} strokes={k.strokes} />
           ) : (
             <div className="surface grid aspect-square place-items-center">
-              <span className="font-jp text-8xl text-[var(--color-fg)]">{k.literal}</span>
+              <span lang="ja" className="font-jp text-8xl text-[var(--color-fg)]">{k.literal}</span>
             </div>
           )}
         </div>
@@ -91,7 +91,7 @@ export default async function KanjiDetailPage({ params }: { params: Promise<{ li
       {k.words.length > 0 && (
         <div className="mt-9">
           <h2 className="text-xs uppercase tracking-wider text-[var(--color-fg-faint)]">
-            Palabras con <span className="font-jp">{k.literal}</span>
+            Palabras con <span lang="ja" className="font-jp">{k.literal}</span>
           </h2>
           <ul className="mt-3 divide-y divide-[var(--color-line)] overflow-hidden rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)]">
             {k.words.map((w, i) => (
@@ -99,7 +99,7 @@ export default async function KanjiDetailPage({ params }: { params: Promise<{ li
                 <div className="flex items-center gap-3">
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: dot[i % dot.length] }} />
                   <div>
-                    <div className="font-jp text-lg text-[var(--color-fg)]">
+                    <div lang="ja" className="font-jp text-lg text-[var(--color-fg)]">
                       {w.expression.split(k.literal).map((part, j, arr) => (
                         <span key={j}>
                           {part}

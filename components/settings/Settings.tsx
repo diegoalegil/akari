@@ -44,6 +44,7 @@ export function Settings({ initial }: { initial: AppSettings }) {
   const router = useRouter();
   const [s, setS] = useState(initial);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [saveError, setSaveError] = useState(false);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -51,7 +52,7 @@ export function Settings({ initial }: { initial: AppSettings }) {
     document.documentElement.classList.toggle("reduce-motion", s.reducedMotion);
   }, [s.theme, s.reducedMotion]);
 
-  const save = (key: string, value: string) => void updateSetting(key, value);
+  const save = (key: string, value: string) => { updateSetting(key, value).catch(() => setSaveError(true)); };
   const setNum = (v: number) => { const n = Math.max(0, Math.min(100, v)); setS((p) => ({ ...p, newPerDay: n })); save("new_per_day", String(n)); };
   const setStr = <K extends keyof AppSettings>(k: K, key: string, v: string) => { setS((p) => ({ ...p, [k]: v })); save(key, v); };
   const setBool = <K extends keyof AppSettings>(k: K, key: string, v: boolean) => { setS((p) => ({ ...p, [k]: v })); save(key, v ? "1" : "0"); };
@@ -61,12 +62,17 @@ export function Settings({ initial }: { initial: AppSettings }) {
   return (
     <div className="grid gap-8 md:grid-cols-[1fr_280px]">
       <div className="flex flex-col gap-7">
+        {saveError && (
+          <div role="alert" className="rounded-lg border border-[color-mix(in_oklab,var(--color-again)_45%,transparent)] px-4 py-3 text-sm text-[var(--color-again)]">
+            No se pudo guardar el ajuste
+          </div>
+        )}
         <Section title="Estudio">
           <Row title="Tarjetas nuevas por día" desc="Ritmo de palabras nuevas">
             <div className="flex items-center gap-3">
-              <button onClick={() => setNum(s.newPerDay - 5)} className="grid h-8 w-8 place-items-center rounded-lg border border-[var(--color-line-strong)] text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]">−</button>
+              <button aria-label="Menos tarjetas nuevas" onClick={() => setNum(s.newPerDay - 5)} className="grid h-8 w-8 place-items-center rounded-lg border border-[var(--color-line-strong)] text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]">−</button>
               <span className="w-8 text-center text-lg font-semibold tabular-nums">{s.newPerDay}</span>
-              <button onClick={() => setNum(s.newPerDay + 5)} className="grid h-8 w-8 place-items-center rounded-lg border border-[var(--color-line-strong)] text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]">+</button>
+              <button aria-label="Más tarjetas nuevas" onClick={() => setNum(s.newPerDay + 5)} className="grid h-8 w-8 place-items-center rounded-lg border border-[var(--color-line-strong)] text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]">+</button>
             </div>
           </Row>
           <Row title="Animación de la tarjeta" desc="Cómo se revela el reverso">
@@ -120,8 +126,8 @@ export function Settings({ initial }: { initial: AppSettings }) {
       <div className="md:sticky md:top-8 md:self-start">
         <h2 className="mb-2 text-[10px] uppercase tracking-wider text-[var(--color-fg-faint)]">Vista previa</h2>
         <div className="surface ambient-lantern flex flex-col items-center gap-3 px-6 py-9" style={{ boxShadow: "var(--akari-glow)" }}>
-          <span className="font-jp text-6xl text-[var(--color-fg)]">灯</span>
-          <span className="font-jp text-[var(--color-ember)]">あかり</span>
+          <span lang="ja" className="font-jp text-6xl text-[var(--color-fg)]">灯</span>
+          <span lang="ja" className="font-jp text-[var(--color-ember)]">あかり</span>
           <div className="mt-1 flex gap-2">
             <span className="rounded-lg border px-3 py-1 text-sm" style={{ borderColor: "color-mix(in oklab, var(--color-good) 45%, transparent)", color: "var(--color-good)" }}>Bien</span>
             <span className="rounded-lg border px-3 py-1 text-sm" style={{ borderColor: "color-mix(in oklab, var(--color-easy) 45%, transparent)", color: "var(--color-easy)" }}>Fácil</span>

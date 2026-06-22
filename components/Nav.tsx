@@ -29,7 +29,7 @@ const I = {
       <circle cx="12" cy="12" r="3.2" /><path d="M12 2.5v2M12 19.5v2M21.5 12h-2M4.5 12h-2M18.7 5.3l-1.4 1.4M6.7 17.3l-1.4 1.4M18.7 18.7l-1.4-1.4M6.7 6.7 5.3 5.3" />
     </svg>
   ),
-  glyph: (ch: string) => <span className="font-jp text-[19px] leading-none">{ch}</span>,
+  glyph: (ch: string) => <span aria-hidden className="font-jp text-[19px] leading-none">{ch}</span>,
 };
 
 const ITEMS: Item[] = [
@@ -68,7 +68,7 @@ export function Nav({ streak = 0 }: { streak?: number }) {
       <Link href="/" className="mb-2 hidden items-center gap-2 px-3 py-2 md:flex" aria-label="Akari — inicio">
         <Lantern size={26} />
         <span className="text-[17px] font-semibold tracking-tight text-[var(--color-fg)]">Akari</span>
-        <span className="font-jp ml-auto text-sm text-[var(--color-fg-faint)]">灯</span>
+        <span aria-hidden className="font-jp ml-auto text-sm text-[var(--color-fg-faint)]">灯</span>
       </Link>
 
       {ITEMS.map((it) => {
@@ -105,7 +105,7 @@ export function Nav({ streak = 0 }: { streak?: number }) {
           <div>
             <div className="text-[10px] uppercase tracking-wider text-[var(--color-ember)]">Arco en desarrollo</div>
             <div className="text-sm font-semibold text-[var(--color-fg)]">
-              {streak} <span className="font-normal text-[var(--color-fg-faint)]">días</span>
+              {streak} <span className="font-normal text-[var(--color-fg-faint)]">{streak === 1 ? "día" : "días"}</span>
             </div>
           </div>
         </div>

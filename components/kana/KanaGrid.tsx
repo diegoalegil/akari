@@ -11,7 +11,7 @@ const MASTERY: Record<KanaCell["mastery"], string> = {
 function Cell({ c, style }: { c: KanaCell; style: CSSProperties }) {
   return (
     <div style={style} className={`flex aspect-square flex-col items-center justify-center gap-0.5 rounded-lg border ${MASTERY[c.mastery]}`}>
-      <span className="font-jp text-lg leading-none sm:text-xl">{c.char}</span>
+      <span lang="ja" className="font-jp text-lg leading-none sm:text-xl">{c.char}</span>
       <span className="text-[9px] leading-none opacity-70 sm:text-[10px]">{c.romaji}</span>
     </div>
   );
