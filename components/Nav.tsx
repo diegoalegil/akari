@@ -1,4 +1,5 @@
 "use client";
+import { motion } from "framer-motion";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
@@ -81,7 +82,15 @@ export function Nav({ streak = 0 }: { streak?: number }) {
               ${active ? "text-[var(--color-fg)]" : "text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]"}`}
           >
             {active && (
-              <span className="absolute inset-0 -z-10 rounded-xl bg-[color-mix(in_oklab,var(--color-indigo)_16%,transparent)] ring-1 ring-[color-mix(in_oklab,var(--color-indigo)_30%,transparent)]" />
+              <motion.span
+                layoutId="nav-active"
+                transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                className="absolute inset-0 -z-10 rounded-xl bg-[color-mix(in_oklab,var(--color-indigo)_16%,transparent)] ring-1 ring-[color-mix(in_oklab,var(--color-indigo)_30%,transparent)]"
+              >
+                {/* accent edge: left bar in the desktop sidebar, top bar in the mobile bar */}
+                <span className="absolute left-0 top-1/2 hidden h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-gradient-to-b from-[var(--color-akari)] to-[var(--color-ember)] md:block" />
+                <span className="absolute inset-x-4 top-0 h-[2px] rounded-full bg-gradient-to-r from-[var(--color-akari)] to-[var(--color-ember)] md:hidden" />
+              </motion.span>
             )}
             <span className={active ? "text-[var(--color-indigo)]" : ""}>{it.icon}</span>
             <span className="md:font-medium">{it.label}</span>

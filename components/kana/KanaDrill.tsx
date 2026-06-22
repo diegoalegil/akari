@@ -15,6 +15,18 @@ const GRADES = [
 ] as const;
 const KEYS = ["again", "hard", "good", "easy"] as const;
 
+// Accept kunrei-style romaji as equivalent to the Hepburn stored in the deck,
+// so typing "si"/"tu"/"hu" for し/つ/ふ isn't unfairly marked wrong.
+const ROMAJI_ALT: Record<string, string> = {
+  si: "shi", ti: "chi", tu: "tsu", hu: "fu", zi: "ji", di: "ji", du: "zu",
+  sya: "sha", syu: "shu", syo: "sho", tya: "cha", tyu: "chu", tyo: "cho",
+  zya: "ja", zyu: "ju", zyo: "jo", jya: "ja", jyu: "ju", jyo: "jo", wo: "o",
+};
+function normRomaji(s: string): string {
+  const k = s.trim().toLowerCase().replace(/[\s'-]/g, "");
+  return ROMAJI_ALT[k] ?? k;
+}
+
 export type DrillMode = "recognition" | "recall";
 
 export function KanaDrill({ items, mode, title }: { items: KanaQueueItem[]; mode: DrillMode; title: string }) {
@@ -24,12 +36,23 @@ export function KanaDrill({ items, mode, title }: { items: KanaQueueItem[]; mode
   const [revealed, setRevealed] = useState(false);
   const [pending, setPending] = useState(false);
   const [done, setDone] = useState(0);
+  const [typed, setTyped] = useState("");
+  const [wasCorrect, setWasCorrect] = useState<boolean | null>(null);
   const startedAt = useRef<number>(Date.now());
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const finished = idx >= items.length;
   const item = items[idx];
+  // Recognition shows the kana and asks for its romaji — typeable on a Latin
+  // keyboard, so we turn it into active recall instead of passive reveal.
+  const typedMode = mode === "recognition";
 
   const reveal = useCallback(() => setRevealed(true), []);
+  const submitTyped = useCallback(() => {
+    if (revealed || !item) return;
+    setWasCorrect(normRomaji(typed) === normRomaji(item.romaji));
+    setRevealed(true);
+  }, [revealed, item, typed]);
   const grade = useCallback(
     async (g: number) => {
       if (!revealed || pending || !item) return;
@@ -40,6 +63,8 @@ export function KanaDrill({ items, mode, title }: { items: KanaQueueItem[]; mode
         setDone((d) => d + 1);
         setRevealed(false);
         setPending(false);
+        setTyped("");
+        setWasCorrect(null);
         startedAt.current = Date.now();
         setIdx((i) => i + 1);
       }
@@ -47,20 +72,29 @@ export function KanaDrill({ items, mode, title }: { items: KanaQueueItem[]; mode
     [revealed, pending, item],
   );
 
+  // Focus the answer field as each recognition card appears.
+  useEffect(() => {
+    if (typedMode && !revealed) inputRef.current?.focus();
+  }, [idx, typedMode, revealed]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (finished) return;
-      if ((e.key === " " || e.key === "Enter") && !revealed) {
+      const t = e.target as HTMLElement | null;
+      const inField = !!t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
+      if (!revealed && (e.key === "Enter" || (e.key === " " && !typedMode))) {
+        if (inField && e.key !== "Enter") return;
         e.preventDefault();
-        reveal();
-      } else if (revealed && ["1", "2", "3", "4"].includes(e.key)) {
+        if (typedMode) submitTyped();
+        else reveal();
+      } else if (revealed && !inField && ["1", "2", "3", "4"].includes(e.key)) {
         e.preventDefault();
         void grade(Number(e.key));
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [finished, revealed, reveal, grade]);
+  }, [finished, revealed, typedMode, reveal, submitTyped, grade]);
 
   if (finished) {
     return (
@@ -99,10 +133,10 @@ export function KanaDrill({ items, mode, title }: { items: KanaQueueItem[]; mode
 
       <main className="flex flex-1 items-center justify-center px-4">
         <div
-          onClick={!revealed ? reveal : undefined}
-          role={!revealed ? "button" : undefined}
-          tabIndex={!revealed ? 0 : undefined}
-          className={`surface ambient-lantern relative grid min-h-[44vh] w-full max-w-md place-items-center overflow-hidden px-6 py-10 text-center ${!revealed ? "cursor-pointer" : ""}`}
+          onClick={!revealed && !typedMode ? reveal : undefined}
+          role={!revealed && !typedMode ? "button" : undefined}
+          tabIndex={!revealed && !typedMode ? 0 : undefined}
+          className={`surface ambient-lantern relative grid min-h-[44vh] w-full max-w-md place-items-center overflow-hidden px-6 py-10 text-center ${!revealed && !typedMode ? "cursor-pointer" : ""}`}
           style={revealed ? { boxShadow: "var(--akari-glow)" } : undefined}
         >
           {item.isNew && (
@@ -111,13 +145,34 @@ export function KanaDrill({ items, mode, title }: { items: KanaQueueItem[]; mode
           <AnimatePresence mode="wait" initial={false}>
             {!revealed ? (
               <motion.div key="front" initial={{ opacity: 0 }} animate={{ opacity: 1, rotateY: 0 }} exit={reduce ? { opacity: 0 } : { opacity: 0, rotateY: -8 }} transition={{ duration: reduce ? 0.05 : 0.18, ease: EASE }}>
-                <div className={`${promptJp ? "font-jp text-8xl" : "text-7xl"} font-medium leading-none text-[var(--color-fg)]`}>{prompt}</div>
-                <p className="mt-8 text-sm text-[var(--color-fg-faint)]">Toca para mostrar · espacio</p>
+                <div lang={promptJp ? "ja" : undefined} className={`${promptJp ? "font-jp text-8xl" : "text-7xl"} font-medium leading-none text-[var(--color-fg)]`}>{prompt}</div>
+                {typedMode ? (
+                  <input
+                    ref={inputRef}
+                    value={typed}
+                    onChange={(e) => setTyped(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); submitTyped(); } }}
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck={false}
+                    placeholder="romaji…"
+                    aria-label="Escribe el romaji"
+                    className="mt-8 w-44 rounded-xl border border-[var(--color-line-strong)] bg-[var(--color-surface-2)] px-4 py-3 text-center text-2xl tracking-wide text-[var(--color-fg)] outline-none transition-colors placeholder:text-[var(--color-fg-faint)] focus:border-[var(--color-indigo)]"
+                  />
+                ) : (
+                  <p className="mt-8 text-sm text-[var(--color-fg-faint)]">Toca para mostrar · espacio</p>
+                )}
               </motion.div>
             ) : (
               <motion.div key="back" initial={reduce ? { opacity: 0 } : { opacity: 0, rotateY: 8 }} animate={{ opacity: 1, rotateY: 0 }} transition={{ duration: reduce ? 0.05 : 0.22, ease: EASE }} className="flex flex-col items-center gap-3">
-                <div className={`${promptJp ? "text-3xl text-[var(--color-fg-muted)]" : "font-jp text-4xl text-[var(--color-fg-muted)]"}`}>{prompt}</div>
-                <div className={`${promptJp ? "text-6xl" : "font-jp text-7xl"} font-medium leading-none text-[var(--color-ember)]`}>{answer}</div>
+                <div lang={promptJp ? "ja" : undefined} className={`${promptJp ? "font-jp text-3xl" : "text-4xl"} text-[var(--color-fg-muted)]`}>{prompt}</div>
+                <div lang={promptJp ? undefined : "ja"} className={`${promptJp ? "text-6xl" : "font-jp text-7xl"} font-medium leading-none text-[var(--color-ember)]`}>{answer}</div>
+                {wasCorrect !== null && (
+                  <div className={`text-sm font-medium ${wasCorrect ? "text-[var(--color-good)]" : "text-[var(--color-again)]"}`}>
+                    {wasCorrect ? "¡Correcto!" : `Escribiste «${typed.trim() || "—"}»`}
+                  </div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -127,8 +182,8 @@ export function KanaDrill({ items, mode, title }: { items: KanaQueueItem[]; mode
       <footer className="px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
         <div className="mx-auto w-full max-w-md">
           {!revealed ? (
-            <button onClick={reveal} className="w-full rounded-xl border border-[var(--color-line-strong)] bg-[var(--color-surface-2)] py-3.5 font-medium text-[var(--color-fg)] transition-colors hover:border-[var(--color-indigo)]">
-              Mostrar respuesta
+            <button onClick={typedMode ? submitTyped : reveal} className="w-full rounded-xl border border-[var(--color-line-strong)] bg-[var(--color-surface-2)] py-3.5 font-medium text-[var(--color-fg)] transition-colors hover:border-[var(--color-indigo)]">
+              {typedMode ? "Comprobar" : "Mostrar respuesta"}
             </button>
           ) : (
             <div className="grid grid-cols-4 gap-2">
