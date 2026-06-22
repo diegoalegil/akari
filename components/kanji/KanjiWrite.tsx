@@ -6,6 +6,9 @@ import type { KanjiWriteItem } from "@/lib/kanjiDrill";
 import { matchKanji, type MatchResult, type Pt } from "@/lib/strokeMatch";
 import { gradeCard } from "@/app/review/actions";
 import { Lantern } from "@/components/Lantern";
+import { playSound } from "@/lib/sound";
+
+const GRADE_SND = ["again", "hard", "good", "easy"] as const;
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 const GRADES = [
@@ -85,7 +88,10 @@ export function KanjiWrite({ items }: { items: KanjiWriteItem[] }) {
     const stroke = curRef.current;
     curRef.current = [];
     setCur([]);
-    if (stroke.length > 1) setStrokes((s) => [...s, stroke]);
+    if (stroke.length > 1) {
+      setStrokes((s) => [...s, stroke]);
+      playSound("stroke");
+    }
   };
 
   const undo = () => !checked && setStrokes((s) => s.slice(0, -1));
@@ -94,8 +100,10 @@ export function KanjiWrite({ items }: { items: KanjiWriteItem[] }) {
   const check = useCallback(() => {
     if (checked || !item || strokes.length === 0) return;
     const ref = item.strokes.map((_, i) => sampleEl(refPaths.current[i]));
-    setChecked(matchKanji(strokes, ref));
+    const res = matchKanji(strokes, ref);
+    setChecked(res);
     setGuide(true);
+    playSound(res.ok ? "correct" : "wrong");
   }, [checked, item, strokes]);
 
   const grade = useCallback(
@@ -114,6 +122,7 @@ export function KanjiWrite({ items }: { items: KanjiWriteItem[] }) {
         setSaveError(true);
         return;
       }
+      playSound(GRADE_SND[g - 1]);
       // Re-queue a failed kanji this session (blank the stale interval preview).
       if (g === 1) setQueue((q) => [...q, { ...item, intervals: { ...BLANK_INTERVALS } }]);
       if (g >= 3 && checked.ok) setCorrect((c) => c + 1);
@@ -142,6 +151,12 @@ export function KanjiWrite({ items }: { items: KanjiWriteItem[] }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [finished, checked, check, grade]);
+
+  // Celebrate once when the session ends.
+  const completedRef = useRef(false);
+  useEffect(() => {
+    if (finished && !completedRef.current) { completedRef.current = true; playSound("complete"); }
+  }, [finished]);
 
   if (finished) {
     return (

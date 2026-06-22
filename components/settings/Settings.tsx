@@ -5,6 +5,7 @@ import { useEffect, useState, useTransition } from "react";
 import type { AppSettings } from "@/lib/queries";
 import { resetProgress, setApiKey, updateSetting } from "@/app/settings/actions";
 import { Lantern } from "@/components/Lantern";
+import { playSound, setSoundEnabled } from "@/lib/sound";
 
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -116,6 +117,9 @@ export function Settings({ initial }: { initial: AppSettings }) {
         </section>
 
         <Section title="Audio y movimiento">
+          <Row title="Sonidos" desc="Efectos de sonido (koto, campana, trazo)">
+            <Toggle on={s.sound} onChange={(v) => { setBool("sound", "sound", v); setSoundEnabled(v); if (v) playSound("good"); }} />
+          </Row>
           <Row title="Reproducir al revelar" desc="Audio nativo tras el giro"><Toggle on={s.autoplay} onChange={(v) => setBool("autoplay", "autoplay", v)} /></Row>
           <Row title="Movimiento reducido" desc="Conserva el brillo, calma el resto"><Toggle on={s.reducedMotion} onChange={(v) => setBool("reducedMotion", "reduced_motion", v)} /></Row>
         </Section>

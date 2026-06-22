@@ -6,8 +6,10 @@ import type { ReviewCard } from "@/lib/review";
 import { gradeCard } from "@/app/review/actions";
 import { Lantern } from "@/components/Lantern";
 import { Explain } from "@/components/explain/Explain";
+import { playSound } from "@/lib/sound";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
+const GRADE_SND = ["again", "hard", "good", "easy"] as const;
 
 const GRADES = [
   { g: 1, label: "Otra vez", color: "var(--color-again)", key: "1" },
@@ -111,6 +113,7 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { c
   const reveal = useCallback(() => {
     if (revealed) return;
     setRevealed(true);
+    playSound("flip");
     if (autoplay && card?.audio) setTimeout(playWord, 120);
   }, [revealed, card, playWord, autoplay]);
 
@@ -133,6 +136,7 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { c
         setSaveError(true);
         return;
       }
+      playSound(GRADE_SND[g - 1]);
       // "Otra vez" (Again) → re-queue this session, blanking the now-stale
       // interval preview (it was computed from the pre-lapse FSRS state).
       if (g === 1) setQueue((q) => [...q, { ...card, intervals: { ...BLANK_INTERVALS } }]);
@@ -168,6 +172,12 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { c
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [finished, revealed, reveal, grade, playWord]);
+
+  // Celebrate once when the session ends.
+  const completedRef = useRef(false);
+  useEffect(() => {
+    if (finished && !completedRef.current) { completedRef.current = true; playSound("complete"); }
+  }, [finished]);
 
   if (finished) {
     return (

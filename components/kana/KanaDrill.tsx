@@ -5,6 +5,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { KanaQueueItem } from "@/lib/kana";
 import { gradeCard } from "@/app/review/actions";
 import { Lantern } from "@/components/Lantern";
+import { playSound } from "@/lib/sound";
+
+const GRADE_SND = ["again", "hard", "good", "easy"] as const;
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 const GRADES = [
@@ -50,11 +53,13 @@ export function KanaDrill({ items, mode, title }: { items: KanaQueueItem[]; mode
   // keyboard, so we turn it into active recall instead of passive reveal.
   const typedMode = mode === "recognition";
 
-  const reveal = useCallback(() => setRevealed(true), []);
+  const reveal = useCallback(() => { setRevealed(true); playSound("flip"); }, []);
   const submitTyped = useCallback(() => {
     if (revealed || !item) return;
-    setWasCorrect(normRomaji(typed) === normRomaji(item.romaji));
+    const ok = normRomaji(typed) === normRomaji(item.romaji);
+    setWasCorrect(ok);
     setRevealed(true);
+    playSound(ok ? "correct" : "wrong");
   }, [revealed, item, typed]);
   const grade = useCallback(
     async (g: number) => {
@@ -73,6 +78,7 @@ export function KanaDrill({ items, mode, title }: { items: KanaQueueItem[]; mode
         setSaveError(true);
         return;
       }
+      playSound(GRADE_SND[g - 1]);
       // Re-queue an "Otra vez" card, blanking the now-stale interval preview.
       if (g === 1) setQueue((q) => [...q, { ...item, intervals: { ...BLANK_INTERVALS } }]);
       setDone((d) => d + 1);
@@ -109,6 +115,12 @@ export function KanaDrill({ items, mode, title }: { items: KanaQueueItem[]; mode
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [finished, revealed, typedMode, reveal, submitTyped, grade]);
+
+  // Celebrate once when the drill ends.
+  const completedRef = useRef(false);
+  useEffect(() => {
+    if (finished && !completedRef.current) { completedRef.current = true; playSound("complete"); }
+  }, [finished]);
 
   if (finished) {
     return (

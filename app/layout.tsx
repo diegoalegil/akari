@@ -4,6 +4,7 @@ import "./globals.css";
 import { Nav } from "@/components/Nav";
 import { Splash } from "@/components/Splash";
 import { MotionProvider } from "@/components/MotionProvider";
+import { SoundProvider } from "@/components/SoundProvider";
 import { getSettings, getStreak } from "@/lib/queries";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover" };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const { theme, reducedMotion } = getSettings();
+  const { theme, reducedMotion, sound } = getSettings();
   return (
     <html lang="es" data-theme={theme} className={`${inter.variable}${reducedMotion ? " reduce-motion" : ""}`}>
       <head>
@@ -30,6 +31,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       </head>
       <body>
         <MotionProvider reduced={reducedMotion}>
+          <SoundProvider enabled={sound} />
           <Splash />
           <Nav streak={getStreak()} />
           <main className="min-h-screen pb-24 md:pb-0 md:pl-64">{children}</main>
