@@ -4,11 +4,13 @@ A personal, **local-first** Japanese learning app with SRS (spaced repetition).
 Vocabulary + kanji + sentences, a kana trainer, native audio, animated kanji
 stroke order, and an on-demand **"Explícame"** AI panel for grammar/usage.
 
-> **Core rule:** Akari **never** generates Japanese learning content with an LLM.
-> Every word, reading, sentence and kanji reading comes from validated open
-> datasets. A subtly wrong reading, drilled by the SRS, gets burned in
-> permanently — so correctness beats convenience, always. The only LLM touch
-> point is the clearly-labelled "Explícame" panel, which can never edit a card.
+> **Core rule:** Akari **never** generates Japanese with an LLM at runtime.
+> Every word, **reading**, example sentence and kanji reading comes from
+> validated open datasets — a subtly wrong reading, drilled by the SRS, gets
+> burned in permanently. The Spanish **meanings** are translated EN→ES once at
+> build time (cached in `db/translations.es.json`, reviewable; the Japanese and
+> readings are never touched). The only *runtime* LLM is the clearly-labelled
+> "Explícame" grammar panel, which streams on demand and can never edit a card.
 
 ## Stack
 - **Next.js 15** (App Router, TypeScript) + **Tailwind CSS v4**
@@ -25,13 +27,35 @@ stroke order, and an on-demand **"Explícame"** AI panel for grammar/usage.
 | [KanjiVG](https://github.com/KanjiVG/kanjivg) | stroke-order SVGs | CC BY-SA 3.0 |
 | [Tatoeba](https://tatoeba.org/) | example sentences + native audio | CC BY 2.0 FR |
 | [Kaishi 1.5k](https://github.com/donkuri/kaishi) | curated 1.5k word order + bundled audio | see attributions |
+| [open-anki-jlpt-decks](https://github.com/jamsinclair/open-anki-jlpt-decks) | JLPT level per word | MIT |
 
 ## Quick start
 ```bash
 npm install
 npm run seed   # downloads + parses datasets into data/app.db (cached after first run)
 npm run dev    # http://localhost:3000
+npm test       # FSRS scheduler tests
 ```
+
+The **Explícame** panel is optional and uses your own key. To enable it, add to
+`.env.local` (the only place an LLM is called at runtime, per click):
+
+```
+ANTHROPIC_API_KEY=sk-ant-...
+# EXPLAIN_MODEL=claude-sonnet-4-6   # optional override
+```
+
+## Features
+- **Dashboard** — today's queue, lantern streak, recent kanji, live stats.
+- **Repaso (SRS)** — full-screen flip session, native audio, example sentences,
+  Again/Hard/Good/Easy via `ts-fsrs`; keyboard `space` / `1–4` / `J`.
+- **Kana** — hiragana/katakana gojūon grid + recognition & recall drills.
+- **Kanji** — browse + detail with animated **KanjiVG stroke order**, on/kun,
+  JLPT/grade/frequency, and words using each kanji.
+- **Progreso** — retention, streak, year heatmap, JLPT mastery, 14-day forecast.
+- **Ajustes** — new-cards/day, card animation, theme, audio/motion, export, reset.
+- **Buscar (⌘K)** — search vocabulary + kanji.
+- **Explícame** — on-demand AI grammar/usage panel (labeled, read-only).
 
 ## Data pipeline (`npm run seed`)
 1. **download** — fetch raw datasets into `data/raw/` (cached; reruns are fast).
