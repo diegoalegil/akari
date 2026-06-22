@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { KanjiStrokes } from "@/components/kanji/KanjiStrokes";
+import { Explain } from "@/components/explain/Explain";
 import { getKanjiDetail } from "@/lib/kanji";
 
 export const dynamic = "force-dynamic";
@@ -76,6 +77,11 @@ export default async function KanjiDetailPage({ params }: { params: Promise<{ li
               <div className="font-jp mt-1 text-lg text-[var(--color-fg)]">{k.kun.length ? k.kun.join("、") : "—"}</div>
             </div>
           </div>
+
+          <Explain
+            label="Explícame este kanji"
+            context={{ expression: k.literal, reading: [...k.on, ...k.kun][0], meaning: k.meanings[0] }}
+          />
         </div>
       </div>
 

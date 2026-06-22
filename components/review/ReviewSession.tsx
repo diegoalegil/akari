@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReviewCard } from "@/lib/review";
 import { gradeCard } from "@/app/review/actions";
 import { Lantern } from "@/components/Lantern";
+import { Explain } from "@/components/explain/Explain";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -199,6 +200,9 @@ export function ReviewSession({ cards }: { cards: ReviewCard[] }) {
                 transition={{ duration: 0.28, ease: EASE, delay: 0.06 }}
                 className="flex flex-col gap-3"
               >
+                <div className="flex justify-center">
+                  <Explain context={{ expression: card.expression, reading: card.reading, meaning: card.meaning, sentence: card.sentences[0]?.jp }} />
+                </div>
                 {card.sentences.map((s, i) => (
                   <div key={i} className="surface p-4">
                     <div className="flex items-start justify-between gap-3">
