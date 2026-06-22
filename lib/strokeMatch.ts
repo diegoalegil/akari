@@ -67,7 +67,7 @@ export type MatchResult = {
 };
 
 const N = 24; // resample resolution
-const PASS = 0.17; // normalized per-stroke tolerance — forgiving but shape/order-aware
+const PASS = 0.13; // normalized per-stroke tolerance — strict: shape, order & direction must be right
 
 /** Compare the user's raw strokes against the reference's raw strokes. */
 export function matchKanji(userRaw: Pt[][], refRaw: Pt[][]): MatchResult {
