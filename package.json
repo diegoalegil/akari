@@ -9,7 +9,7 @@
     "build": "next build",
     "start": "next start",
     "download": "tsx scripts/download.ts",
-    "seed": "tsx scripts/seed.ts",
+    "seed": "NODE_OPTIONS=--max-old-space-size=4096 tsx scripts/seed.ts",
     "stats": "tsx scripts/stats.ts",
     "test": "tsx --test tests/**/*.test.ts"
   },
