@@ -32,6 +32,10 @@ export function Explain({ context, label = "Explícame" }: { context: ExplainCon
           setHistory([...base, { role: "assistant", text: "Para usar Explícame, añade tu `ANTHROPIC_API_KEY` en `.env.local` y reinicia. Es la única función que usa IA — bajo demanda y de tu cuenta." }]);
           return;
         }
+        if (!res.ok) {
+          setHistory([...base, { role: "assistant", text: "_La conversación es demasiado larga; ciérrala y vuelve a empezar._" }]);
+          return;
+        }
         if (!res.body) throw new Error("no body");
         const reader = res.body.getReader();
         const dec = new TextDecoder();
@@ -69,13 +73,18 @@ export function Explain({ context, label = "Explícame" }: { context: ExplainCon
     if (!open) return;
     inputRef.current?.focus();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setOpen(false);
-        triggerRef.current?.focus();
-      }
+      if (e.key === "Escape") setOpen(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  // Restore focus to the trigger whenever the dialog closes (any path:
+  // Escape, backdrop, or the X button). Guarded so it never fires on mount.
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    if (wasOpen.current && !open) triggerRef.current?.focus();
+    wasOpen.current = open;
   }, [open]);
 
   return (

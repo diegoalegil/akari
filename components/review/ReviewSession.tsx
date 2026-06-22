@@ -361,8 +361,9 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { c
                   disabled={pending}
                   onClick={() => grade(b.g)}
                   animate={lastKey === b.key ? { scale: 0.94 } : { scale: 1 }}
+                  whileTap={{ scale: 0.97 }}
                   transition={{ duration: 0.12, ease: EASE }}
-                  className="relative flex flex-col items-center gap-0.5 rounded-xl border py-2.5 transition-[background-color] duration-[var(--motion-fast)] hover:bg-[color-mix(in_oklab,var(--btn)_14%,transparent)] active:scale-[0.97] disabled:opacity-50"
+                  className="relative flex flex-col items-center gap-0.5 rounded-xl border py-2.5 transition-[background-color] duration-[var(--motion-fast)] hover:bg-[color-mix(in_oklab,var(--btn)_14%,transparent)] disabled:opacity-50"
                   style={{ borderColor: "color-mix(in oklab, var(--btn) 45%, transparent)", ["--btn" as string]: b.color }}
                 >
                   <span className="absolute right-1.5 top-1 hidden rounded border border-[var(--color-line)] px-1 text-[10px] text-[var(--color-fg-faint)] sm:block">{b.key}</span>

@@ -14,6 +14,7 @@ const GRADES = [
   { g: 4, label: "Fácil", color: "var(--color-easy)" },
 ] as const;
 const KEYS = ["again", "hard", "good", "easy"] as const;
+const BLANK_INTERVALS = { again: "", hard: "", good: "", easy: "" } as const;
 
 // Accept kunrei-style romaji as equivalent to the Hepburn stored in the deck,
 // so typing "si"/"tu"/"hu" for し/つ/ふ isn't unfairly marked wrong.
@@ -72,7 +73,8 @@ export function KanaDrill({ items, mode, title }: { items: KanaQueueItem[]; mode
         setSaveError(true);
         return;
       }
-      if (g === 1) setQueue((q) => [...q, item]);
+      // Re-queue an "Otra vez" card, blanking the now-stale interval preview.
+      if (g === 1) setQueue((q) => [...q, { ...item, intervals: { ...BLANK_INTERVALS } }]);
       setDone((d) => d + 1);
       setRevealed(false);
       setPending(false);
