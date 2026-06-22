@@ -7,6 +7,20 @@ export async function updateSetting(key: string, value: string) {
   return { ok: true as const };
 }
 
+/**
+ * Store (or clear) the user's own Anthropic API key for the Explícame panel.
+ * Kept in the local settings table, read only server-side by /api/explain —
+ * never serialized back to the client. Basic shape check to catch typos.
+ */
+export async function setApiKey(raw: string) {
+  const key = raw.trim();
+  if (key && !/^sk-ant-/.test(key)) return { ok: false as const, reason: "format" as const };
+  const db = getDb();
+  if (key) db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('anthropic_api_key', ?)").run(key);
+  else db.prepare("DELETE FROM settings WHERE key = 'anthropic_api_key'").run();
+  return { ok: true as const, set: key.length > 0 };
+}
+
 /** Wipe review history and reset every card to a fresh FSRS state. */
 export async function resetProgress() {
   const db = getDb();

@@ -49,6 +49,7 @@ export type AppSettings = {
   cardAnim: string; // turn | flip
   autoplay: boolean;
   reducedMotion: boolean;
+  hasApiKey: boolean; // whether Explícame is configured (env OR in-app key) — never the key itself
 };
 
 export function getSettings(): AppSettings {
@@ -58,6 +59,7 @@ export function getSettings(): AppSettings {
     cardAnim: getSetting("card_anim", "turn"),
     autoplay: getSetting("autoplay", "1") === "1",
     reducedMotion: getSetting("reduced_motion", "0") === "1",
+    hasApiKey: !!process.env.ANTHROPIC_API_KEY || getSetting("anthropic_api_key", "").trim().length > 0,
   };
 }
 

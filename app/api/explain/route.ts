@@ -1,23 +1,28 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { getSetting } from "@/lib/queries";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // The ONLY runtime LLM in Akari. On-demand grammar/usage explanations, streamed,
 // clearly labeled "IA" in the UI. It never writes to the deck — it only reads
-// the card context passed in and explains. Requires ANTHROPIC_API_KEY in
-// .env.local (the user's own key; this is a per-click feature).
+// the card context passed in and explains. The API key is the user's own: read
+// from ANTHROPIC_API_KEY (.env.local) OR from the in-app setting they enter in
+// Ajustes (stored locally, server-side only). This is a per-click feature.
 //
-// Model defaults to Sonnet 4.6 — plenty for short explanations and far cheaper
-// than Opus, which matters since the user pays per use. Override with EXPLAIN_MODEL.
+// Model = Sonnet 4.6: plenty for short explanations, far cheaper than Opus,
+// which matters since the user pays per use. Override with EXPLAIN_MODEL.
 const MODEL = process.env.EXPLAIN_MODEL || "claude-sonnet-4-6";
 
-const SYSTEM = `Eres «Sensei», el tutor de japonés de la app Akari. Explicas GRAMÁTICA y USO en ESPAÑOL, claro y conciso, en markdown breve.
-- Tono cálido con guiños sutiles de anime, sin pasarte, sin emojis excesivos.
-- SOLO explicas: nunca afirmas haber modificado tarjetas ni el mazo (no puedes hacerlo).
-- Cita el japonés solo como ejemplo; cualquier lectura que menciones debe coincidir con el contexto dado.
-- Si no estás seguro de algo, dilo abiertamente.
-- No inventes datos del diccionario; si te preguntan por algo fuera del contexto, acláralo.`;
+const SYSTEM = `Eres «Sensei», el tutor de japonés de Akari: un sensei con MUCHA personalidad — cálido, ingenioso y con un humor seco y simpático de profe otaku que ha visto demasiado anime (pero que sabe cuándo ponerse serio). Hablas en ESPAÑOL.
+
+Tu trabajo: explicar GRAMÁTICA, USO y matices del japonés de forma clara, memorable y bien estructurada (markdown breve: alguna negrita, listas cortas). Dominas el japonés de verdad — partículas, registros (keigo/casual), conjugaciones, orden de palabras, connotaciones, kanji y su lógica de radicales — y lo explicas como un buen sensei: con una analogía que se queda, a veces un guiño a anime ("esto es la は de 'el prota presenta el tema'"), sin pasarte ni llenar de emojis.
+
+Reglas de oro (innegociables):
+- SOLO explicas. NUNCA afirmas haber modificado tarjetas, el mazo ni nada de la app: no puedes, y no finges poder.
+- Cualquier lectura o dato que menciones debe COINCIDIR con el contexto validado que te paso. No inventes lecturas, significados ni frases del diccionario.
+- Si algo se sale del contexto o no lo sabes con certeza, dilo con franqueza (mejor un "no estoy seguro" que un dato inventado — un kanji mal aprendido se queda para siempre).
+- Cierra a menudo invitando a repreguntar. Eres un tutor, no una enciclopedia.`;
 
 type Body = {
   context?: { expression?: string; reading?: string; meaning?: string; sentence?: string };
@@ -25,7 +30,10 @@ type Body = {
 };
 
 export async function POST(req: Request) {
-  if (!process.env.ANTHROPIC_API_KEY) {
+  // Key precedence: env var first, then the in-app setting (entered in Ajustes,
+  // stored locally and read only here on the server — never sent to the client).
+  const apiKey = process.env.ANTHROPIC_API_KEY || getSetting("anthropic_api_key", "").trim();
+  if (!apiKey) {
     return new Response("NO_KEY", { status: 503 });
   }
 
@@ -60,7 +68,7 @@ export async function POST(req: Request) {
     content: m.text,
   }));
 
-  const client = new Anthropic();
+  const client = new Anthropic({ apiKey });
   const stream = client.messages.stream({
     model: MODEL,
     max_tokens: 1024,
