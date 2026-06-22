@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+/* ── Akari design tokens (dark, "anime-but-refined") ──────────────────────────
+   Foundation only; the full design language lives in DESIGN.md (Phase 2). */
+@theme {
+  /* Ink / surfaces */
+  --color-ink: #0e0f13;
+  --color-surface: #16181f;
+  --color-surface-2: #1d2029;
+  --color-line: #2a2e3a;
+
+  /* Text */
+  --color-fg: #eceef5;
+  --color-fg-muted: #9aa0b0;
+  --color-fg-faint: #5b6173;
+
+  /* Lantern accents (the "akari" signature) */
+  --color-akari: #ff7e9d; /* sakura */
+  --color-ember: #f2b66b; /* warm glow */
+  --color-indigo-night: #6c7bff; /* focus / state */
+
+  /* Semantic grades (muted, never garish) */
+  --color-again: #e06a6a;
+  --color-hard: #d9a35b;
+  --color-good: #7bbf8f;
+  --color-easy: #5fb3c9;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-jp: "Zen Kaku Gothic New", "Noto Sans JP", var(--font-sans);
+}
+
+html,
+body {
+  background: var(--color-ink);
+  color: var(--color-fg);
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Respect reduced-motion globally; per-component motion still opts in. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
