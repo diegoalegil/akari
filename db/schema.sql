@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS words (
   expression     TEXT NOT NULL,      -- canonical surface form (from Kaishi)
   reading        TEXT NOT NULL,      -- canonical reading (from Kaishi)
   meaning_en     TEXT NOT NULL,      -- gloss from the JMdict entry matched by (expr+reading)
+  meaning_es     TEXT,               -- EN→ES translation (build-time, cached in db/translations.es.json)
   meaning_source TEXT NOT NULL CHECK (meaning_source IN ('jmdict', 'kaishi')),
   frequency      INTEGER,            -- lower = more frequent (from JMdict nfXX / Kaishi)
   jlpt           INTEGER,            -- best-effort; may be NULL at word level
@@ -36,8 +37,11 @@ CREATE TABLE IF NOT EXISTS kanji (
   id           INTEGER PRIMARY KEY,
   literal      TEXT NOT NULL UNIQUE,
   jlpt         INTEGER,              -- KANJIDIC2 old 1–4 scale
+  grade        INTEGER,              -- school grade (1–6 jōyō, 8 secondary, 9/10 jinmeiyō)
+  frequency    INTEGER,              -- newspaper frequency rank (1 = most frequent)
   stroke_count INTEGER,
   meanings     TEXT,                 -- JSON array of English meanings
+  meanings_es  TEXT,                 -- JSON array of Spanish meanings (parallel to meanings)
   on_readings  TEXT,                 -- JSON array (katakana)
   kun_readings TEXT,                 -- JSON array (hiragana)
   kanjivg_svg  TEXT                  -- raw SVG markup with kvg:* stroke metadata
@@ -54,6 +58,7 @@ CREATE TABLE IF NOT EXISTS sentences (
   id     INTEGER PRIMARY KEY,
   jp     TEXT NOT NULL,
   en     TEXT,
+  es     TEXT,                       -- EN→ES translation (build-time, cached)
   source TEXT NOT NULL CHECK (source IN ('tatoeba', 'kaishi'))
 );
 

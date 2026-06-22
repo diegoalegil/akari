@@ -41,6 +41,16 @@ export async function buildDb(manifest: Manifest): Promise<Record<string, number
   await ensureDir(path.dirname(DB_PATH));
   const kaishiAudioDir = path.join(PUBLIC_AUDIO, "kaishi");
 
+  // Spanish translations (EN→ES) generated at build time and committed to
+  // db/translations.es.json. Optional — absent => meaning_es stays NULL and the
+  // UI falls back to English. Readings/Japanese are never translated.
+  const trPath = path.join(ROOT, "db", "translations.es.json");
+  const esMap: Map<string, string> = existsSync(trPath)
+    ? new Map(Object.entries(JSON.parse(readFileSync(trPath, "utf8")) as Record<string, string>))
+    : new Map();
+  const tr = (en: string | null | undefined): string | null => (en ? esMap.get(en) ?? null : null);
+  if (esMap.size) console.log(`  loaded ${esMap.size} ES translations`);
+
   // ── Parse everything (async) ────────────────────────────────────────────────
   console.log("Parsing Kaishi (.apkg) + extracting native audio…");
   const notes = await parseKaishi(manifest.kaishi.apkgPath, kaishiAudioDir);
@@ -99,7 +109,8 @@ export async function buildDb(manifest: Manifest): Promise<Record<string, number
     const d = kanjidic.get(lit);
     return {
       id: kid, literal: lit,
-      jlpt: d?.jlpt ?? null, strokeCount: d?.strokeCount ?? null,
+      jlpt: d?.jlpt ?? null, grade: d?.grade ?? null, frequency: d?.frequency ?? null,
+      strokeCount: d?.strokeCount ?? null,
       meanings: JSON.stringify(d?.meanings ?? []),
       on: JSON.stringify(d?.on ?? []), kun: JSON.stringify(d?.kun ?? []),
       svg: kanjivg.getSvg(lit),
@@ -202,20 +213,23 @@ export async function buildDb(manifest: Manifest): Promise<Record<string, number
     kana.forEach((k, i) => kanaStmt.run(i + 1, k.char, k.romaji, k.type, k.row, k.col, k.group_tag));
 
     const wStmt = db.prepare(
-      "INSERT INTO words (id,kaishi_order,expression,reading,meaning_en,meaning_source,frequency,jlpt,audio_path) VALUES (?,?,?,?,?,?,?,?,?)",
+      "INSERT INTO words (id,kaishi_order,expression,reading,meaning_en,meaning_es,meaning_source,frequency,jlpt,audio_path) VALUES (?,?,?,?,?,?,?,?,?,?)",
     );
-    for (const w of words) wStmt.run(w.id, w.order, w.expression, w.reading, w.meaning, w.meaningSource, w.frequency, null, w.audio);
+    for (const w of words) wStmt.run(w.id, w.order, w.expression, w.reading, w.meaning, tr(w.meaning), w.meaningSource, w.frequency, null, w.audio);
 
     const kStmt = db.prepare(
-      "INSERT INTO kanji (id,literal,jlpt,stroke_count,meanings,on_readings,kun_readings,kanjivg_svg) VALUES (?,?,?,?,?,?,?,?)",
+      "INSERT INTO kanji (id,literal,jlpt,grade,frequency,stroke_count,meanings,meanings_es,on_readings,kun_readings,kanjivg_svg) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
     );
-    for (const k of kanjiRows) kStmt.run(k.id, k.literal, k.jlpt, k.strokeCount, k.meanings, k.on, k.kun, k.svg);
+    for (const k of kanjiRows) {
+      const esMeanings = JSON.stringify((JSON.parse(k.meanings) as string[]).map((m) => tr(m) ?? m));
+      kStmt.run(k.id, k.literal, k.jlpt, k.grade, k.frequency, k.strokeCount, k.meanings, esMeanings, k.on, k.kun, k.svg);
+    }
 
     const wkStmt = db.prepare("INSERT OR IGNORE INTO word_kanji (word_id,kanji_id) VALUES (?,?)");
     for (const [w, k] of wordKanji) wkStmt.run(w, k);
 
-    const sStmt = db.prepare("INSERT INTO sentences (id,jp,en,source) VALUES (?,?,?,?)");
-    for (const s of sentences) sStmt.run(s.id, s.jp, s.en, s.source);
+    const sStmt = db.prepare("INSERT INTO sentences (id,jp,en,es,source) VALUES (?,?,?,?,?)");
+    for (const s of sentences) sStmt.run(s.id, s.jp, s.en, tr(s.en), s.source);
 
     const wsStmt = db.prepare("INSERT OR IGNORE INTO word_sentences (word_id,sentence_id,rank) VALUES (?,?,?)");
     for (const ws of wordSentences) wsStmt.run(ws.word, ws.sentence, ws.rank);

@@ -36,3 +36,6 @@ npm-debug.log*
 # misc
 *.tsbuildinfo
 .vercel
+
+# design comp reference (not committed)
+/public/_design/

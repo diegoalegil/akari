@@ -25,22 +25,22 @@ export type ReviewCard = {
 type Row = Record<string, unknown>;
 
 function buildCard(db: ReturnType<typeof getDb>, id: number, isNew: boolean, now: Date): ReviewCard {
-  const w = db.prepare("SELECT expression, reading, meaning_en, audio_path FROM words WHERE id = ?").get(id) as Row;
+  const w = db.prepare("SELECT expression, reading, meaning_en, meaning_es, audio_path FROM words WHERE id = ?").get(id) as Row;
   const sentences = (
     db
       .prepare(
-        `SELECT s.jp jp, s.en en,
+        `SELECT s.jp jp, s.en en, s.es es,
                 (SELECT file_path FROM sentence_audio WHERE sentence_id = s.id LIMIT 1) audio
          FROM word_sentences ws JOIN sentences s ON s.id = ws.sentence_id
          WHERE ws.word_id = ? ORDER BY ws.rank ASC LIMIT 2`,
       )
       .all(id) as Row[]
-  ).map((r) => ({ jp: r.jp as string, en: (r.en as string) ?? null, audio: (r.audio as string) ?? null }));
+  ).map((r) => ({ jp: r.jp as string, en: ((r.es as string) ?? (r.en as string)) ?? null, audio: (r.audio as string) ?? null }));
   const kanji = (
     db
-      .prepare("SELECT k.literal literal, k.meanings meanings FROM word_kanji wk JOIN kanji k ON k.id = wk.kanji_id WHERE wk.word_id = ?")
+      .prepare("SELECT k.literal literal, k.meanings meanings, k.meanings_es meanings_es FROM word_kanji wk JOIN kanji k ON k.id = wk.kanji_id WHERE wk.word_id = ?")
       .all(id) as Row[]
-  ).map((r) => ({ literal: r.literal as string, meanings: (JSON.parse((r.meanings as string) || "[]") as string[]).slice(0, 3) }));
+  ).map((r) => ({ literal: r.literal as string, meanings: (JSON.parse((r.meanings_es as string) || (r.meanings as string) || "[]") as string[]).slice(0, 3) }));
   const cs = db.prepare("SELECT fsrs_card FROM card_state WHERE card_type='word' AND card_id = ?").get(id) as Row;
 
   return {
@@ -49,7 +49,7 @@ function buildCard(db: ReturnType<typeof getDb>, id: number, isNew: boolean, now
     isNew,
     expression: w.expression as string,
     reading: w.reading as string,
-    meaning: w.meaning_en as string,
+    meaning: ((w.meaning_es as string) ?? (w.meaning_en as string)) as string,
     audio: (w.audio_path as string) ?? null,
     sentences,
     kanji,
