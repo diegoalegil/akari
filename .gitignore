@@ -39,3 +39,7 @@ npm-debug.log*
 
 # design comp reference (not committed)
 /public/_design/
+
+# Generated static-PWA assets (rebuilt by scripts/export-static-db.ts)
+public/akari.db.gz
+public/sql-wasm.wasm

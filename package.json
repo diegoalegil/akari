@@ -11,6 +11,7 @@
     "download": "tsx scripts/download.ts",
     "seed": "NODE_OPTIONS=--max-old-space-size=4096 tsx scripts/seed.ts",
     "stats": "tsx scripts/stats.ts",
+    "export:db": "tsx scripts/export-static-db.ts",
     "test": "tsx --test tests/**/*.test.ts"
   },
   "dependencies": {
@@ -23,6 +24,7 @@
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "server-only": "^0.0.1",
+    "sql.js": "^1.14.1",
     "tar": "^7.5.16",
     "ts-fsrs": "^5.4.1",
     "unbzip2-stream": "^1.4.3",
@@ -34,6 +36,7 @@
     "@types/node": "^26.0.0",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
+    "@types/sql.js": "^1.4.11",
     "@types/unzipper": "^0.10.11",
     "tailwindcss": "^4.3.1",
     "tsx": "^4.22.4",
