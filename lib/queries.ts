@@ -134,7 +134,7 @@ export function getDashboard(): DashboardData {
       "SELECT count(*) c FROM card_state WHERE card_type='word' AND introduced_at IS NOT NULL AND due IS NOT NULL AND datetime(due) <= datetime('now')",
     ),
     newRemaining: Math.max(0, Math.min(newPerDay - introducedToday, notIntroduced)),
-    reviewsToday: count(db, "SELECT count(*) c FROM review_log WHERE card_type='word' AND date(reviewed_at,'localtime') = date('now','localtime')"),
+    reviewsToday: count(db, "SELECT count(*) c FROM review_log WHERE date(reviewed_at,'localtime') = date('now','localtime')"),
     streak: computeStreak(db),
     kanjiInVocab: count(db, "SELECT count(DISTINCT kanji_id) c FROM word_kanji"),
     recentKanji,

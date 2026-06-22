@@ -27,7 +27,7 @@ export function getStats(): Stats {
   const db = getDb();
   if (!seeded(db)) return EMPTY;
   const totalReviews = n(db, "SELECT count(*) c FROM review_log");
-  const passed = n(db, "SELECT count(*) c FROM review_log WHERE grade >= 3");
+  const passed = n(db, "SELECT count(*) c FROM review_log WHERE grade >= 2");
   // Word-scoped, mirroring the (word-only) dashboard so "dominio" is a vocab figure.
   const introduced = n(db, "SELECT count(*) c FROM card_state WHERE card_type='word' AND introduced_at IS NOT NULL");
   const known = n(db, "SELECT count(*) c FROM card_state WHERE card_type='word' AND introduced_at IS NOT NULL AND state = 2");
@@ -67,7 +67,7 @@ export function getStats(): Stats {
   const dueCounts = new Map<string, number>();
   for (const r of db
     .prepare(
-      "SELECT date(due,'localtime') d, count(*) c FROM card_state WHERE introduced_at IS NOT NULL AND due IS NOT NULL GROUP BY d",
+      "SELECT date(due,'localtime') d, count(*) c FROM card_state WHERE card_type='word' AND introduced_at IS NOT NULL AND due IS NOT NULL GROUP BY d",
     )
     .all() as Row[]) {
     dueCounts.set(r.d as string, r.c as number);
