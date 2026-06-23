@@ -15,6 +15,8 @@ const PRECACHE_URLS = [
   "/icon.svg",
   "/apple-touch-icon.png",
   "/icon-192.png",
+  "/icon-512.png",
+  "/icon-512-maskable.png",
   // __NEXT_ASSETS__ (replaced at build with the hashed _next/static chunks)
 ];
 
@@ -65,13 +67,23 @@ self.addEventListener("fetch", (event) => {
   }
   if (url.origin !== self.location.origin) return;
 
-  // Navigation requests: network-first, fall back to the exact cached page,
-  // then the app shell.
+  // Navigation requests: network-first (caching the route HTML so an offline
+  // cold-load of a visited route serves the real page), then the exact cached
+  // page, then the app shell.
   if (request.mode === "navigate") {
     event.respondWith(
       (async () => {
         try {
-          return await fetch(request);
+          const res = await fetch(request);
+          if (res && res.ok && res.type === "basic") {
+            const cache = await caches.open(CACHE);
+            try {
+              await cache.put(request, res.clone());
+            } catch (_) {
+              /* ignore put errors */
+            }
+          }
+          return res;
         } catch (_) {
           const cache = await caches.open(CACHE);
           const cached = await cache.match(request);
