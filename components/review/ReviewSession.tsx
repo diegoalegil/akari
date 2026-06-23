@@ -247,14 +247,22 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", revie
   const progress = queue.length ? (done / queue.length) * 100 : 0;
   const headLabel = `${card.expression} — ${card.reading} — ${card.meaning}`;
 
+  // Kana-only words (expression === reading) would otherwise print the same kana
+  // twice on the back — show the pitch contour on the headword and drop the
+  // separate reading line for them; kanji words keep both (they differ).
+  const kanaOnly = card.reading === card.expression;
   // Card back content (reading + meaning + audio), shared by both flip modes.
   const Back = (
     <>
-      <div role="img" lang="ja" aria-label={headLabel} className="font-jp text-4xl font-medium leading-tight text-[var(--color-fg)] sm:text-5xl"><Furigana text={card.furigana} fallback={card.expression} /></div>
-      <div className="flex items-center gap-3">
-        <span lang="ja" aria-hidden className="font-jp text-xl text-[var(--color-ember)]"><PitchAccent reading={card.reading} accent={card.pitchAccent} pitchReading={card.pitchReading} /></span>
-        {card.audio && <Speaker src={`/${card.audio}`} label="Pronunciación" />}
+      <div role="img" lang="ja" aria-label={headLabel} className="font-jp text-4xl font-medium leading-tight text-[var(--color-fg)] sm:text-5xl">
+        {kanaOnly ? <PitchAccent reading={card.expression} accent={card.pitchAccent} pitchReading={card.pitchReading} /> : <Furigana text={card.furigana} fallback={card.expression} />}
       </div>
+      {(!kanaOnly || card.audio) && (
+        <div className="flex items-center gap-3">
+          {!kanaOnly && <span lang="ja" aria-hidden className="font-jp text-xl text-[var(--color-ember)]"><PitchAccent reading={card.reading} accent={card.pitchAccent} pitchReading={card.pitchReading} /></span>}
+          {card.audio && <Speaker src={`/${card.audio}`} label="Pronunciación" />}
+        </div>
+      )}
       <p aria-hidden className="max-w-md text-pretty text-lg text-[var(--color-fg)]">{card.meaning}</p>
     </>
   );

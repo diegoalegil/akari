@@ -5,6 +5,8 @@ import { useEffect, useState, useTransition } from "react";
 import type { AppSettings } from "@/lib/queries";
 import { resetProgress, setApiKey, updateSetting } from "@/app/settings/actions";
 import { Lantern } from "@/components/Lantern";
+import { Furigana } from "@/components/Furigana";
+import { PitchAccent } from "@/components/PitchAccent";
 import { playSound, setSoundEnabled } from "@/lib/sound";
 import { flushClientDb, getClientDb } from "@/lib/clientDb";
 
@@ -202,8 +204,8 @@ export function Settings({ initial }: { initial: AppSettings }) {
       <div className="md:sticky md:top-8 md:self-start">
         <h2 className="mb-2 text-[10px] uppercase tracking-wider text-[var(--color-fg-faint)]">Vista previa</h2>
         <div className="surface ambient-lantern flex flex-col items-center gap-3 px-6 py-9" style={{ boxShadow: "var(--akari-glow)" }}>
-          <span lang="ja" className="font-jp text-6xl text-[var(--color-fg)]">灯</span>
-          <span lang="ja" className="font-jp text-[var(--color-ember)]">あかり</span>
+          <span lang="ja" className="font-jp text-6xl leading-relaxed text-[var(--color-fg)]"><Furigana text="灯[あかり]" fallback="灯" /></span>
+          <span lang="ja" className="font-jp text-[var(--color-ember)]"><PitchAccent reading="あかり" accent={0} /></span>
           <div className="mt-1 flex gap-2">
             <span className="rounded-lg border px-3 py-1 text-sm" style={{ borderColor: "color-mix(in oklab, var(--color-good) 45%, transparent)", color: "var(--color-good)" }}>Bien</span>
             <span className="rounded-lg border px-3 py-1 text-sm" style={{ borderColor: "color-mix(in oklab, var(--color-easy) 45%, transparent)", color: "var(--color-easy)" }}>Fácil</span>

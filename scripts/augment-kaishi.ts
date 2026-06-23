@@ -65,7 +65,7 @@ function canonRuby(s: string): string {
     .replace(/<\/?b>/g, "")
     .replace(/<br\s*\/?>/g, "")
     .replace(/\[sound:[^\]]+\]/g, "")
-    .replace(/\s+(?=[一-龯ぁ-んァ-ヶ々]+\[)/g, "") // space before a ruby group
+    .replace(/\s+(?=[0-9０-９一-龯ぁ-んァ-ヶ々]+\[)/g, "") // space before a ruby group (incl. numeral bases)
     .replace(/(?<=\])\s+/g, "") // space right after a ruby group
     .replace(/&nbsp;/g, " ")
     .trim();

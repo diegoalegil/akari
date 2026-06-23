@@ -106,7 +106,7 @@ export function KanjiDetailClient({ literal }: { literal: string }) {
                     <div lang="ja" className="font-jp text-lg leading-relaxed text-[var(--color-fg)]">
                       <Furigana text={w.furigana} fallback={w.expression} />
                     </div>
-                    <div lang="ja" className="font-jp text-xs text-[var(--color-ember)]">
+                    <div lang="ja" aria-hidden className="font-jp text-xs text-[var(--color-ember)]">
                       <PitchAccent reading={w.reading} accent={w.pitchAccent} pitchReading={w.pitchReading} />
                     </div>
                   </div>
