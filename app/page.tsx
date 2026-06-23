@@ -49,6 +49,8 @@ export default function Home() {
   const d = getDashboard();
   const today = new Intl.DateTimeFormat("es-ES", { weekday: "long", day: "numeric", month: "long" }).format(new Date());
   const ready = d.dueNow + d.newRemaining;
+  const kanjiReady = d.kanji.due + d.kanji.newAvail;
+  const kanaReady = d.kana.due + d.kana.newAvail;
 
   if (!d.seeded) {
     return (
@@ -99,6 +101,24 @@ export default function Home() {
               </div>
               <StartSession />
             </>
+          ) : kanjiReady + kanaReady > 0 ? (
+            <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-4">
+                <Lantern size={44} />
+                <div>
+                  <p className="text-lg text-[var(--color-fg)]">Vocabulario al día.</p>
+                  <p className="text-sm text-[var(--color-fg-muted)]">
+                    Aún te {kanjiReady + kanaReady === 1 ? "queda" : "quedan"}{kanjiReady > 0 ? ` ${kanjiReady} kanji` : ""}{kanjiReady > 0 && kanaReady > 0 ? " y" : ""}{kanaReady > 0 ? ` ${kanaReady} kana` : ""} por practicar.
+                  </p>
+                </div>
+              </div>
+              <Link
+                href={kanjiReady > 0 ? "/kanji/write" : "/kana"}
+                className="shrink-0 rounded-xl bg-gradient-to-r from-[var(--color-akari)] to-[var(--color-ember)] px-5 py-2.5 text-center font-semibold text-[var(--color-ink-deep)] shadow-[var(--akari-glow)] transition-[filter] hover:brightness-105"
+              >
+                {kanjiReady > 0 ? "Escribir kanji" : "Practicar kana"} →
+              </Link>
+            </div>
           ) : (
             <div className="mt-5 flex items-center gap-4">
               <Lantern size={44} animated={false} />
