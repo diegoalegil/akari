@@ -100,9 +100,9 @@ export function KanjiDetailClient({ literal }: { literal: string }) {
           <ul className="mt-3 divide-y divide-[var(--color-line)] overflow-hidden rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)]">
             {k.words.map((w, i) => (
               <li key={w.expression + i} className="flex items-center justify-between gap-4 px-5 py-3.5">
-                <div className="flex items-center gap-3">
+                <div className="flex min-w-0 items-center gap-3">
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: dot[i % dot.length] }} />
-                  <div>
+                  <div className="min-w-0">
                     <div lang="ja" className="font-jp text-lg leading-relaxed text-[var(--color-fg)]">
                       <Furigana text={w.furigana} fallback={w.expression} />
                     </div>

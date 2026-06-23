@@ -1,8 +1,12 @@
-// Targeted migration: copy the validated Word/Sentence Furigana from the Kaishi
-// deck into the already-built data/app.db (no full re-seed). Idempotent. The same
-// extraction is mirrored in scripts/parse/kaishi.ts + build-db.ts so a fresh
-// `npm run seed` reproduces it. HARD RULE intact: furigana is copied verbatim
-// from Kaishi's own validated furigana fields — never synthesized.
+// Targeted migration: copy the validated Word/Sentence Furigana + derive pitch
+// accent from the Kaishi deck into the already-built data/app.db (no full
+// re-seed). Idempotent. This step is the ONLY thing that fills words.furigana /
+// pitch_accent / pitch_reading and sentences.furigana — build-db.ts/parse-kaishi
+// do NOT, so it's chained after the build via the `npm run seed` script
+// (`tsx scripts/seed.ts && tsx scripts/augment-kaishi.ts`). Running
+// `tsx scripts/seed.ts` directly yields an app.db with those columns NULL.
+// HARD RULE intact: furigana is copied verbatim and pitch is a deterministic
+// parse of Kaishi's own validated fields — never synthesized.
 import Database from "better-sqlite3";
 import { existsSync } from "node:fs";
 import path from "node:path";

@@ -149,8 +149,8 @@ export default function StatsPage() {
           <h2 className="mt-0.5 font-medium text-[var(--color-fg)]">Palabras que más olvidas</h2>
           <p className="mt-1 text-sm text-[var(--color-fg-muted)]">Las que más veces se te han escapado. Dales un repaso extra.</p>
           <ul className="mt-4 flex flex-col divide-y divide-[var(--color-line)]">
-            {s.leeches.map((w) => (
-              <li key={w.expression} className="flex items-center justify-between gap-3 py-2.5">
+            {s.leeches.map((w, i) => (
+              <li key={w.expression + i} className="flex items-center justify-between gap-3 py-2.5">
                 <div className="min-w-0">
                   <span lang="ja" className="font-jp text-lg leading-relaxed text-[var(--color-fg)]"><Furigana text={w.furigana} fallback={w.expression} /></span>
                   <span className="ml-2 text-sm text-[var(--color-fg-muted)]">· {w.meaning}</span>

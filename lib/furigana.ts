@@ -4,8 +4,9 @@
 // the furigana itself is validated Kaishi data, never generated here.
 export type FuriToken = { base: string; rt: string } | { text: string };
 
-// Kanji run that can carry a reading: CJK unified + ext-A + iteration/repeat marks.
-const RUBY = /([㐀-鿿々〆ヶ]+)\[([^\]]+)\]/g;
+// A run that can carry a reading: CJK unified + ext-A + iteration/repeat marks,
+// plus ASCII/fullwidth digits (Kaishi writes e.g. "3[さん]" with a numeral base).
+const RUBY = /([0-9０-９㐀-鿿々〆ヶ]+)\[([^\]]+)\]/g;
 
 export function parseFurigana(input: string | null | undefined): FuriToken[] {
   const s = (input ?? "").replace(/<\/?b>/g, ""); // any stray bold → ignore
@@ -21,10 +22,4 @@ export function parseFurigana(input: string | null | undefined): FuriToken[] {
   }
   if (last < s.length) out.push({ text: s.slice(last) });
   return out;
-}
-
-/** True if the string actually carries ruby (has at least one base[reading]). */
-export function hasRuby(s: string | null | undefined): boolean {
-  RUBY.lastIndex = 0;
-  return !!s && RUBY.test(s);
 }

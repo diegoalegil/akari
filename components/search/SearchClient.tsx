@@ -64,7 +64,7 @@ export function SearchClient() {
           <ul className="divide-y divide-[var(--color-line)] overflow-hidden rounded-xl border border-[var(--color-line)] bg-[var(--color-surface)]">
             {res.words.map((w, i) => (
               <li key={w.expression + i} className="flex items-center justify-between gap-4 px-5 py-3">
-                <div lang="ja" className="font-jp text-lg leading-relaxed text-[var(--color-fg)]">
+                <div lang="ja" className="min-w-0 font-jp text-lg leading-relaxed text-[var(--color-fg)]">
                   <Furigana text={w.furigana} fallback={w.expression} />
                 </div>
                 <span className="max-w-[50%] truncate text-right text-sm text-[var(--color-fg-muted)]">{w.meaning}</span>

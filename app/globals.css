@@ -155,6 +155,9 @@ html.no-pitch .pitch-mora::before,
 html.no-pitch .pitch-mora::after {
   display: none;
 }
+html.no-pitch .pitch-mora {
+  padding-top: 0; /* collapse the reserved overline band when the contour is off */
+}
 
 /* The lantern glow — a soft warm bloom. Use sparingly; it's the signature. */
 .glow-ember {
