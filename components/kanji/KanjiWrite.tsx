@@ -53,6 +53,7 @@ export function KanjiWrite({ items }: { items: KanjiWriteItem[] }) {
   const refPaths = useRef<(SVGPathElement | null)[]>([]);
   const drawing = useRef(false);
   const curRef = useRef<Pt[]>([]); // source of truth for the in-progress stroke
+  const rafRef = useRef<number>(0); // throttles the live-stroke re-render to one/frame
   const startedAt = useRef<number>(Date.now());
 
   const finished = idx >= queue.length;
@@ -77,12 +78,20 @@ export function KanjiWrite({ items }: { items: KanjiWriteItem[] }) {
   };
   const onMove = (e: React.PointerEvent) => {
     if (!drawing.current || checked) return;
-    curRef.current = [...curRef.current, toSvg(e)];
-    setCur(curRef.current);
+    // Push in place (no per-event array copy) and coalesce the live-preview
+    // re-render to one per animation frame — avoids O(n²) work on long strokes.
+    curRef.current.push(toSvg(e));
+    if (!rafRef.current) {
+      rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = 0;
+        setCur(curRef.current.slice());
+      });
+    }
   };
   const onUp = () => {
     if (!drawing.current) return;
     drawing.current = false;
+    if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = 0; }
     // Snapshot the stroke into a local BEFORE resetting the ref — the setStrokes
     // updater runs later and would otherwise read the already-cleared ref.
     const stroke = curRef.current;
@@ -157,6 +166,9 @@ export function KanjiWrite({ items }: { items: KanjiWriteItem[] }) {
   useEffect(() => {
     if (finished && !completedRef.current) { completedRef.current = true; playSound("complete"); }
   }, [finished]);
+
+  // Cancel any pending live-stroke frame on unmount.
+  useEffect(() => () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); }, []);
 
   if (finished) {
     return (
