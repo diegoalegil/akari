@@ -13,7 +13,7 @@ const IDB_KEY = "sqlite";
 // Bump whenever the shipped seed adds/changes CONTENT (new columns, new cards,
 // corrected data). Also versions the seed-fetch URL so a stale service worker
 // can't hand back the previous deploy's DB during an upgrade.
-const SEED_VERSION = 2;
+const SEED_VERSION = 3;
 
 let instance: ClientDb | null = null;
 let loading: Promise<ClientDb> | null = null;
@@ -168,7 +168,7 @@ async function upgradeToSeed(SQL: Awaited<ReturnType<typeof initSqlJs>>, oldDb: 
   // Don't commit the version bump against a STALE seed (e.g. a service worker
   // briefly served the previous deploy). If the expected new content isn't
   // there, bail so we retry on the next load instead of pinning bad content.
-  const fresh = (newDb.exec("PRAGMA table_info(words)")[0]?.values as unknown[][] | undefined)?.some((c) => c[1] === "furigana");
+  const fresh = (newDb.exec("PRAGMA table_info(words)")[0]?.values as unknown[][] | undefined)?.some((c) => c[1] === "pitch_accent");
   if (!fresh) {
     newDb.close();
     throw new Error("seed missing expected content — retry later");
@@ -180,7 +180,12 @@ async function upgradeToSeed(SQL: Awaited<ReturnType<typeof initSqlJs>>, oldDb: 
 /** Add any columns a newer build's queries expect, so an un-upgraded (offline)
  *  cached DB doesn't throw — the new fields just read as NULL until upgrade. */
 function ensureColumns(db: SqlJsDatabase): void {
-  for (const sql of ["ALTER TABLE words ADD COLUMN furigana TEXT", "ALTER TABLE sentences ADD COLUMN furigana TEXT"]) {
+  for (const sql of [
+    "ALTER TABLE words ADD COLUMN furigana TEXT",
+    "ALTER TABLE words ADD COLUMN pitch_accent INTEGER",
+    "ALTER TABLE words ADD COLUMN pitch_reading TEXT",
+    "ALTER TABLE sentences ADD COLUMN furigana TEXT",
+  ]) {
     try {
       db.run(sql);
     } catch {

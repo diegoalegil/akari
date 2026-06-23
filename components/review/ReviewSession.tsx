@@ -7,6 +7,7 @@ import { gradeCard } from "@/app/review/actions";
 import { Lantern } from "@/components/Lantern";
 import { Explain } from "@/components/explain/Explain";
 import { Furigana } from "@/components/Furigana";
+import { PitchAccent } from "@/components/PitchAccent";
 import { playSound } from "@/lib/sound";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -214,7 +215,7 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { c
     <>
       <div lang="ja" aria-label={headLabel} className="font-jp text-4xl font-medium leading-tight text-[var(--color-fg)] sm:text-5xl"><Furigana text={card.furigana} fallback={card.expression} /></div>
       <div className="flex items-center gap-3">
-        <span lang="ja" aria-hidden className="font-jp text-xl text-[var(--color-ember)]">{card.reading}</span>
+        <span lang="ja" aria-hidden className="font-jp text-xl text-[var(--color-ember)]"><PitchAccent reading={card.reading} accent={card.pitchAccent} pitchReading={card.pitchReading} /></span>
         {card.audio && <Speaker src={`/${card.audio}`} label="Pronunciación" />}
       </div>
       <p aria-hidden className="max-w-md text-pretty text-lg text-[var(--color-fg)]">{card.meaning}</p>

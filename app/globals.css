@@ -120,6 +120,38 @@ html.no-furigana rt {
   display: none;
 }
 
+/* Pitch-accent contour: an overline over the high morae + a downstep bar after
+   the accented mora (Tokyo-dialect, OJAD style). Built from a validated integer,
+   never raw HTML. */
+.pitch {
+  display: inline-flex;
+  align-items: flex-start;
+}
+.pitch-mora {
+  position: relative;
+  padding-top: 0.18em;
+}
+.pitch-mora.is-high::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0.04em;
+  height: 0.09em;
+  background: currentColor;
+  opacity: 0.85;
+}
+.pitch-mora.is-drop::after {
+  content: "";
+  position: absolute;
+  right: -0.02em;
+  top: 0.04em;
+  height: 0.5em;
+  width: 0.09em;
+  background: currentColor;
+  opacity: 0.85;
+}
+
 /* The lantern glow — a soft warm bloom. Use sparingly; it's the signature. */
 .glow-ember {
   box-shadow:

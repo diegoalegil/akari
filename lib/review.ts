@@ -16,6 +16,8 @@ export type ReviewCard = {
   expression: string;
   furigana: string | null; // Anki ruby for the headword (validated Kaishi data)
   reading: string;
+  pitchAccent: number | null; // drop position (0 heiban … n); validated Kaishi data
+  pitchReading: string | null; // katakana the accent was derived against
   meaning: string;
   audio: string | null;
   sentences: ReviewSentence[];
@@ -26,7 +28,7 @@ export type ReviewCard = {
 type Row = Record<string, unknown>;
 
 function buildCard(db: ReturnType<typeof getDb>, id: number, isNew: boolean, now: Date): ReviewCard | null {
-  const w = db.prepare("SELECT expression, reading, furigana, meaning_en, meaning_es, audio_path FROM words WHERE id = ?").get(id) as Row | undefined;
+  const w = db.prepare("SELECT expression, reading, furigana, pitch_accent, pitch_reading, meaning_en, meaning_es, audio_path FROM words WHERE id = ?").get(id) as Row | undefined;
   const cs0 = db.prepare("SELECT fsrs_card FROM card_state WHERE card_type='word' AND card_id = ?").get(id) as Row | undefined;
   if (!w || !cs0) return null;
   const sentences = (
@@ -52,6 +54,8 @@ function buildCard(db: ReturnType<typeof getDb>, id: number, isNew: boolean, now
     expression: w.expression as string,
     furigana: (w.furigana as string) ?? null,
     reading: w.reading as string,
+    pitchAccent: (w.pitch_accent as number) ?? null,
+    pitchReading: (w.pitch_reading as string) ?? null,
     meaning: ((w.meaning_es as string) ?? (w.meaning_en as string)) as string,
     audio: (w.audio_path as string) ?? null,
     sentences,
