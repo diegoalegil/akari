@@ -13,7 +13,7 @@
     "stats": "tsx scripts/stats.ts",
     "export:db": "tsx scripts/export-static-db.ts",
     "gen:icons": "tsx scripts/gen-icons.ts",
-    "build:static": "tsx scripts/export-static-db.ts && next build && tsx scripts/postbuild-sw.ts",
+    "build:static": "tsx scripts/export-static-db.ts && next build && rm -rf out/_design && tsx scripts/postbuild-sw.ts",
     "serve:static": "npx --yes serve out -l 3000",
     "test": "tsx --test tests/**/*.test.ts"
   },
