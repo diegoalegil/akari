@@ -1,0 +1,12 @@
+{
+  // Akari is a static export (offline PWA). This deploys an assets-only Worker
+  // that serves the prerendered site in out/. Build first with:
+  //   npm run seed && npm run build:static
+  "name": "akari",
+  "compatibility_date": "2025-01-01",
+  "assets": {
+    "directory": "./out",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page"
+  }
+}
