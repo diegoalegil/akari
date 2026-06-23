@@ -1,7 +1,6 @@
 "use client";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
-import Anthropic from "@anthropic-ai/sdk";
 import { getSetting } from "@/lib/queries";
 
 export type ExplainContext = { expression: string; reading?: string; meaning?: string; sentence?: string };
@@ -48,6 +47,10 @@ export function Explain({ context, label = "Explícame" }: { context: ExplainCon
         const ctx = context
           ? `Contexto de la tarjeta (datos validados, no los contradigas):\n- Expresión: ${context.expression ?? "—"}\n- Lectura: ${context.reading ?? "—"}\n- Significado: ${context.meaning ?? "—"}${context.sentence ? `\n- Frase: ${context.sentence}` : ""}`
           : "Sin contexto de tarjeta.";
+        // Lazy-loaded so the SDK leaves the eager review / kanji-detail bundles —
+        // it's fetched only when the user actually asks. Still the sole module
+        // that imports @anthropic-ai/sdk (HARD RULE #2 intact).
+        const { default: Anthropic } = await import("@anthropic-ai/sdk");
         const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
         const stream = client.messages.stream({
           model: MODEL,
