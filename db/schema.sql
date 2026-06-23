@@ -25,6 +25,8 @@ CREATE TABLE IF NOT EXISTS words (
   expression     TEXT NOT NULL,      -- canonical surface form (from Kaishi)
   reading        TEXT NOT NULL,      -- canonical reading (from Kaishi)
   furigana       TEXT,               -- Kaishi Word Furigana ruby, e.g. "好[す]き" (validated; filled by augment-kaishi)
+  pitch_accent   INTEGER,            -- Tokyo pitch drop position (0 heiban … n); from Kaishi widget (validated)
+  pitch_reading  TEXT,               -- katakana the pitch pattern applies to (mora-alignment guard)
   meaning_en     TEXT NOT NULL,      -- gloss from the JMdict entry matched by (expr+reading)
   meaning_es     TEXT,               -- EN→ES translation (build-time, cached in db/translations.es.json)
   meaning_source TEXT NOT NULL CHECK (meaning_source IN ('jmdict', 'kaishi')),
