@@ -75,7 +75,7 @@ export function SearchClient() {
       )}
 
       {q.trim() && res.words.length === 0 && res.kanji.length === 0 && (
-        <p className="mt-8 text-center text-sm text-[var(--color-fg-faint)]">Sin resultados para “{q}”.</p>
+        <p className="mt-8 text-center text-sm text-[var(--color-fg-faint)]">Sin resultados para «{q}».</p>
       )}
     </div>
   );

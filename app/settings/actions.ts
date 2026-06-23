@@ -8,8 +8,11 @@ export async function updateSetting(key: string, value: string) {
 
 /**
  * Store (or clear) the user's own Anthropic API key for the Explícame panel.
- * Kept in the local settings table, read only server-side by /api/explain —
- * never serialized back to the client. Basic shape check to catch typos.
+ * Stored in the in-browser settings table and read client-side only by
+ * components/explain/Explain.tsx, which passes it straight to the Anthropic SDK
+ * in the browser (dangerouslyAllowBrowser). It never reaches a server of ours
+ * and getSettings() only ever exposes a hasApiKey boolean. Basic shape check to
+ * catch typos.
  */
 export async function setApiKey(raw: string) {
   const key = raw.trim();

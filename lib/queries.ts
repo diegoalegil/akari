@@ -1,4 +1,5 @@
 import { getDb } from "./db";
+import { safeParseArray } from "./json";
 
 // Read helpers for server components. The SRS queue logic here is intentionally
 // simple for Phase 2 (the full grading loop lands in Phase 4): new cards have
@@ -116,8 +117,8 @@ export function getDashboard(): DashboardData {
       )
       .all() as { literal: string; kun_readings: string; on_readings: string }[]
   ).map((k) => {
-    const kun = JSON.parse(k.kun_readings || "[]") as string[];
-    const on = JSON.parse(k.on_readings || "[]") as string[];
+    const kun = safeParseArray(k.kun_readings);
+    const on = safeParseArray(k.on_readings);
     return { literal: k.literal, reading: cleanReading(kun[0] || on[0] || "") };
   });
   // Word-scoped to match getReviewQueue / the "Empezar sesión" CTA (words only).

@@ -1,5 +1,6 @@
 import { getDb } from "./db";
 import { seeded } from "./queries";
+import { safeParseArray } from "./json";
 
 export type KanjiWord = { expression: string; reading: string; meaning: string };
 export type KanjiDetail = {
@@ -58,9 +59,9 @@ export function getKanjiDetail(literal: string): KanjiDetail | null {
 
   return {
     literal: k.literal as string,
-    meanings: JSON.parse((k.meanings_es as string) || (k.meanings as string) || "[]"),
-    on: JSON.parse((k.on_readings as string) || "[]"),
-    kun: JSON.parse((k.kun_readings as string) || "[]"),
+    meanings: safeParseArray((k.meanings_es as string) || (k.meanings as string)),
+    on: safeParseArray(k.on_readings as string),
+    kun: safeParseArray(k.kun_readings as string),
     jlpt: (k.jlpt as number) ?? null,
     grade: (k.grade as number) ?? null,
     frequency: (k.frequency as number) ?? null,
@@ -87,7 +88,7 @@ export function getKanjiList(limit = 140): KanjiListItem[] {
       .all(limit) as Row[]
   ).map((r) => ({
     literal: r.literal as string,
-    meaning: (JSON.parse((r.meanings as string) || "[]") as string[])[0] ?? "",
+    meaning: safeParseArray(r.meanings as string)[0] ?? "",
     jlpt: (r.jlpt as number) ?? null,
     strokeCount: (r.strokeCount as number) ?? null,
   }));

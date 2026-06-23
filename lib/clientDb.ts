@@ -143,16 +143,3 @@ export function getClientDb(): ClientDb {
   if (!instance) throw new Error("client DB not loaded yet — await loadClientDb() first");
   return instance;
 }
-
-/** Wipe the persisted DB and reload the seed (full reset, offline-safe). */
-export async function resetClientDb(): Promise<void> {
-  const db = await openIdb();
-  await new Promise<void>((resolve, reject) => {
-    const tx = db.transaction(IDB_STORE, "readwrite");
-    tx.objectStore(IDB_STORE).delete(IDB_KEY);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
-  instance = null;
-  loading = null;
-}

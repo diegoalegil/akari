@@ -1,6 +1,7 @@
 import { getDb } from "./db";
 import { getSetting, seeded } from "./queries";
 import { previewIntervals } from "./fsrs";
+import { safeParseArray } from "./json";
 
 // Builds the daily word queue (due reviews + new cards up to the daily limit)
 // with everything the client needs to render each card and the next-interval
@@ -41,7 +42,7 @@ function buildCard(db: ReturnType<typeof getDb>, id: number, isNew: boolean, now
     db
       .prepare("SELECT k.literal literal, k.meanings meanings, k.meanings_es meanings_es FROM word_kanji wk JOIN kanji k ON k.id = wk.kanji_id WHERE wk.word_id = ?")
       .all(id) as Row[]
-  ).map((r) => ({ literal: r.literal as string, meanings: (JSON.parse((r.meanings_es as string) || (r.meanings as string) || "[]") as string[]).slice(0, 3) }));
+  ).map((r) => ({ literal: r.literal as string, meanings: safeParseArray((r.meanings_es as string) || (r.meanings as string)).slice(0, 3) }));
 
   return {
     cardType: "word",

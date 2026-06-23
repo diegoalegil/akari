@@ -2,6 +2,7 @@ import { getDb } from "./db";
 import { seeded } from "./queries";
 import { previewIntervals, type Intervals } from "./fsrs";
 import { extractStrokes } from "./kanji";
+import { safeParseArray } from "./json";
 
 export type KanjiWriteItem = {
   id: number;
@@ -55,9 +56,9 @@ export function getKanjiWriteQueue(limitNew = 10): KanjiWriteItem[] {
   const now = new Date();
   return [...due.map((r) => ({ r, isNew: false })), ...fresh.map((r) => ({ r, isNew: true }))]
     .map(({ r, isNew }) => {
-      const kun = JSON.parse((r.kun_r as string) || "[]") as string[];
-      const on = JSON.parse((r.on_r as string) || "[]") as string[];
-      const meanings = JSON.parse((r.meanings as string) || "[]") as string[];
+      const kun = safeParseArray(r.kun_r as string);
+      const on = safeParseArray(r.on_r as string);
+      const meanings = safeParseArray(r.meanings as string);
       const strokes = extractStrokes(r.svg as string);
       return {
         id: r.id as number,

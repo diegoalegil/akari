@@ -127,7 +127,7 @@ export function KanaDrill({ items, mode, title }: { items: KanaQueueItem[]; mode
       <div className="fixed inset-0 z-40 grid place-items-center bg-[var(--color-ink)] px-6">
         <div className="flex flex-col items-center gap-5 text-center">
           <Lantern size={64} />
-          <h1 className="text-2xl font-semibold tracking-tight">¡Drill completo!</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">¡Práctica completa!</h1>
           <p className="text-[var(--color-fg-muted)]">{done} kana {done === 1 ? "repasado" : "repasados"}. Continuará…</p>
           <button onClick={() => router.push("/kana")} className="mt-2 rounded-xl bg-gradient-to-r from-[var(--color-akari)] to-[var(--color-ember)] px-5 py-2.5 font-semibold text-[var(--color-ink-deep)] shadow-[var(--akari-glow)] transition-[filter] hover:brightness-105">
             Volver
@@ -160,6 +160,7 @@ export function KanaDrill({ items, mode, title }: { items: KanaQueueItem[]; mode
       <main className="flex flex-1 items-center justify-center px-4">
         <div
           onClick={!revealed && !typedMode ? reveal : undefined}
+          onKeyDown={!revealed && !typedMode ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); reveal(); } } : undefined}
           role={!revealed && !typedMode ? "button" : undefined}
           tabIndex={!revealed && !typedMode ? 0 : undefined}
           className={`surface ambient-lantern relative grid min-h-[44vh] w-full max-w-md place-items-center overflow-hidden px-6 py-10 text-center ${!revealed && !typedMode ? "cursor-pointer" : ""}`}
