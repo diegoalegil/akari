@@ -160,7 +160,7 @@ export function KanaDrill({ items, mode, title }: { items: KanaQueueItem[]; mode
       <main className="flex flex-1 items-center justify-center px-4">
         <div
           onClick={!revealed && !typedMode ? reveal : undefined}
-          onKeyDown={!revealed && !typedMode ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); reveal(); } } : undefined}
+          onKeyDown={!revealed && !typedMode ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); reveal(); } } : undefined}
           role={!revealed && !typedMode ? "button" : undefined}
           tabIndex={!revealed && !typedMode ? 0 : undefined}
           className={`surface ambient-lantern relative grid min-h-[44vh] w-full max-w-md place-items-center overflow-hidden px-6 py-10 text-center ${!revealed && !typedMode ? "cursor-pointer" : ""}`}

@@ -250,7 +250,7 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { c
         <div className="mx-auto flex w-full max-w-xl flex-col items-stretch gap-4">
           <div
             onClick={!revealed ? reveal : undefined}
-            onKeyDown={!revealed ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); reveal(); } } : undefined}
+            onKeyDown={!revealed ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); reveal(); } } : undefined}
             role={!revealed ? "button" : undefined}
             tabIndex={!revealed ? 0 : undefined}
             className={`surface ambient-lantern relative block w-full overflow-hidden px-6 py-10 text-center [perspective:1200px] ${!revealed ? "cursor-pointer" : ""}`}
