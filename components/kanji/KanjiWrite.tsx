@@ -201,7 +201,7 @@ export function KanjiWrite({ items }: { items: KanjiWriteItem[] }) {
         <span className="text-xs tabular-nums text-[var(--color-fg-faint)]">{done}/{queue.length}</span>
       </header>
 
-      <main className="flex flex-1 flex-col items-center justify-center gap-4 px-4 py-4">
+      <main className="flex flex-1 flex-col items-center justify-start gap-4 overflow-y-auto px-4 py-4 sm:justify-center">
         {/* prompt */}
         <div className="text-center">
           {item.isNew && <span className="mb-1 inline-block rounded-full bg-[color-mix(in_oklab,var(--color-ember)_22%,transparent)] px-2 py-0.5 text-[11px] font-medium text-[var(--color-ember)]">nuevo</span>}
@@ -211,7 +211,7 @@ export function KanjiWrite({ items }: { items: KanjiWriteItem[] }) {
         </div>
 
         {/* canvas */}
-        <div className="surface ambient-lantern relative w-full max-w-[340px] overflow-hidden" style={checked?.ok ? { boxShadow: "var(--akari-glow)" } : undefined}>
+        <div className="surface ambient-lantern relative w-full max-w-[min(340px,70vh)] overflow-hidden" style={checked?.ok ? { boxShadow: "var(--akari-glow)" } : undefined}>
           <svg
             ref={svgRef}
             viewBox="0 0 109 109"
@@ -257,9 +257,9 @@ export function KanjiWrite({ items }: { items: KanjiWriteItem[] }) {
         {/* tools / verdict */}
         {!checked ? (
           <div className="flex items-center gap-2">
-            <button onClick={undo} disabled={!strokes.length} className="rounded-lg border border-[var(--color-line-strong)] px-3 py-1.5 text-sm text-[var(--color-fg-muted)] transition-colors hover:text-[var(--color-fg)] disabled:opacity-40">Deshacer</button>
-            <button onClick={clear} disabled={!strokes.length} className="rounded-lg border border-[var(--color-line-strong)] px-3 py-1.5 text-sm text-[var(--color-fg-muted)] transition-colors hover:text-[var(--color-fg)] disabled:opacity-40">Borrar</button>
-            <button onClick={() => setGuide((g) => !g)} className={`rounded-lg border px-3 py-1.5 text-sm transition-colors ${guide ? "border-[var(--color-akari)] text-[var(--color-akari)]" : "border-[var(--color-line-strong)] text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]"}`}>{guide ? "Ocultar guía" : "Ver guía"}</button>
+            <button onClick={undo} disabled={!strokes.length} className="min-h-[44px] rounded-lg border border-[var(--color-line-strong)] px-3 py-1.5 text-sm text-[var(--color-fg-muted)] transition-colors hover:text-[var(--color-fg)] disabled:opacity-40 sm:min-h-0">Deshacer</button>
+            <button onClick={clear} disabled={!strokes.length} className="min-h-[44px] rounded-lg border border-[var(--color-line-strong)] px-3 py-1.5 text-sm text-[var(--color-fg-muted)] transition-colors hover:text-[var(--color-fg)] disabled:opacity-40 sm:min-h-0">Borrar</button>
+            <button onClick={() => setGuide((g) => !g)} className={`min-h-[44px] rounded-lg border px-3 py-1.5 text-sm transition-colors sm:min-h-0 ${guide ? "border-[var(--color-akari)] text-[var(--color-akari)]" : "border-[var(--color-line-strong)] text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]"}`}>{guide ? "Ocultar guía" : "Ver guía"}</button>
           </div>
         ) : (
           <p className={`text-sm font-medium ${checked.ok ? "text-[var(--color-good)]" : "text-[var(--color-hard)]"}`}>

@@ -96,9 +96,9 @@ export function Settings({ initial }: { initial: AppSettings }) {
         <Section title="Estudio">
           <Row title="Tarjetas nuevas por día" desc="Ritmo de palabras nuevas">
             <div className="flex items-center gap-3">
-              <button aria-label="Menos tarjetas nuevas" onClick={() => setNum(s.newPerDay - 5)} className="grid h-8 w-8 place-items-center rounded-lg border border-[var(--color-line-strong)] text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]">−</button>
+              <button aria-label="Menos tarjetas nuevas" onClick={() => setNum(s.newPerDay - 5)} className="grid h-10 w-10 place-items-center rounded-lg border border-[var(--color-line-strong)] text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] sm:h-9 sm:w-9">−</button>
               <span className="w-8 text-center text-lg font-semibold tabular-nums">{s.newPerDay}</span>
-              <button aria-label="Más tarjetas nuevas" onClick={() => setNum(s.newPerDay + 5)} className="grid h-8 w-8 place-items-center rounded-lg border border-[var(--color-line-strong)] text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]">+</button>
+              <button aria-label="Más tarjetas nuevas" onClick={() => setNum(s.newPerDay + 5)} className="grid h-10 w-10 place-items-center rounded-lg border border-[var(--color-line-strong)] text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] sm:h-9 sm:w-9">+</button>
             </div>
           </Row>
           <Row title="Animación de la tarjeta" desc="Cómo se revela el reverso">
@@ -150,7 +150,7 @@ export function Settings({ initial }: { initial: AppSettings }) {
                 aria-label="Clave de API de Anthropic"
                 autoComplete="off"
                 spellCheck={false}
-                className="min-w-0 flex-1 rounded-lg border border-[var(--color-line-strong)] bg-[var(--color-surface-2)] px-3 py-2 text-sm text-[var(--color-fg)] outline-none transition-colors placeholder:text-[var(--color-fg-faint)] focus:border-[var(--color-indigo)]"
+                className="min-w-0 flex-1 rounded-lg border border-[var(--color-line-strong)] bg-[var(--color-surface-2)] px-3 py-2 text-base text-[var(--color-fg)] outline-none transition-colors placeholder:text-[var(--color-fg-faint)] focus:border-[var(--color-indigo)] sm:text-sm"
               />
               <button onClick={saveKey} disabled={pending || !keyInput.trim()} className="shrink-0 rounded-lg bg-gradient-to-r from-[var(--color-akari)] to-[var(--color-ember)] px-3.5 py-2 text-sm font-semibold text-[var(--color-ink-deep)] transition-[filter] hover:brightness-105 disabled:opacity-40">
                 Guardar

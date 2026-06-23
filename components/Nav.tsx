@@ -62,7 +62,7 @@ export function Nav({ streak = 0 }: { streak?: number }) {
   }, [router]);
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-30 flex flex-row items-center justify-around border-t border-[var(--color-line)] bg-[color-mix(in_oklab,var(--color-surface)_85%,transparent)] px-2 py-1 backdrop-blur-xl
+      className="fixed inset-x-0 bottom-0 z-30 flex flex-row items-center justify-around border-t border-[var(--color-line)] bg-[color-mix(in_oklab,var(--color-surface)_85%,transparent)] px-2 pt-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] backdrop-blur-xl
                  md:inset-y-0 md:left-0 md:right-auto md:w-64 md:flex-col md:items-stretch md:justify-start md:gap-1 md:border-r md:border-t-0 md:px-3 md:py-5"
     >
       <Link href="/" className="mb-2 hidden items-center gap-2 px-3 py-2 md:flex" aria-label="Akari — inicio">

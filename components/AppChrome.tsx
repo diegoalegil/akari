@@ -41,7 +41,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
     <MotionProvider reduced={settings?.reducedMotion ?? false}>
       <Splash />
       <Nav streak={streak} />
-      <main className="min-h-screen pb-24 md:pb-0 md:pl-64">{children}</main>
+      <main className="min-h-screen pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-0 md:pl-64">{children}</main>
     </MotionProvider>
   );
 }
