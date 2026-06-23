@@ -1,4 +1,3 @@
-"use server";
 import { getDb } from "@/lib/db";
 import { seeded } from "@/lib/queries";
 

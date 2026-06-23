@@ -1,4 +1,3 @@
-"use server";
 import type { Grade } from "ts-fsrs";
 import { getDb } from "@/lib/db";
 import { applyGrade, cardColumns, reviveCard } from "@/lib/fsrs";

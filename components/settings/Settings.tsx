@@ -6,6 +6,7 @@ import type { AppSettings } from "@/lib/queries";
 import { resetProgress, setApiKey, updateSetting } from "@/app/settings/actions";
 import { Lantern } from "@/components/Lantern";
 import { playSound, setSoundEnabled } from "@/lib/sound";
+import { flushClientDb, getClientDb } from "@/lib/clientDb";
 
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -60,6 +61,16 @@ export function Settings({ initial }: { initial: AppSettings }) {
   };
   const clearKey = () => {
     startTransition(async () => { await setApiKey(""); setHasKey(false); setKeyInput(""); setKeyMsg("Clave eliminada"); });
+  };
+  const exportProgress = async () => {
+    await flushClientDb();
+    const blob = new Blob([getClientDb().raw.export() as unknown as BlobPart], { type: "application/x-sqlite3" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "akari-progreso.sqlite";
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   useEffect(() => {
@@ -156,7 +167,7 @@ export function Settings({ initial }: { initial: AppSettings }) {
         </Section>
 
         <Section title="Datos y créditos">
-          <a href="/api/export" className="block px-5 py-4 text-[var(--color-fg)] transition-colors hover:bg-[var(--color-surface-2)]">Exportar progreso</a>
+          <button onClick={exportProgress} className="block w-full px-5 py-4 text-left text-[var(--color-fg)] transition-colors hover:bg-[var(--color-surface-2)]">Exportar progreso</button>
           <Link href="/attributions" className="block px-5 py-4 text-[var(--color-fg-muted)] transition-colors hover:bg-[var(--color-surface-2)]">JMdict · KANJIDIC2 · KanjiVG · Tatoeba</Link>
           <button
             onClick={() => {
