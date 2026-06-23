@@ -10,7 +10,36 @@ import {
   extractTgz,
   githubLatestAsset,
   isMain,
+  type ReleaseAsset,
 } from "./lib/util.ts";
+
+// Pinned known-good releases — the safety net when api.github.com/releases/latest
+// is unreachable (the unauthenticated 60/hr limit is shared across Cloudflare's CI
+// build IPs and exhausts under load, 403-ing the seed and reding the deploy). These
+// `releases/download/<tag>/…` URLs are stable and never expire; refresh them when
+// the upstream datasets bump. The live API is still preferred whenever it answers.
+const PINNED: Record<"jmdict" | "kanjidic" | "kanjivg" | "kaishi", ReleaseAsset> = {
+  jmdict: {
+    name: "jmdict-eng-3.6.2+20260622163854.json.tgz",
+    url: "https://github.com/scriptin/jmdict-simplified/releases/download/3.6.2%2B20260622163854/jmdict-eng-3.6.2%2B20260622163854.json.tgz",
+    tag: "3.6.2+20260622163854",
+  },
+  kanjidic: {
+    name: "kanjidic2-en-3.6.2+20260622163854.json.tgz",
+    url: "https://github.com/scriptin/jmdict-simplified/releases/download/3.6.2%2B20260622163854/kanjidic2-en-3.6.2%2B20260622163854.json.tgz",
+    tag: "3.6.2+20260622163854",
+  },
+  kanjivg: {
+    name: "kanjivg-20250816-main.zip",
+    url: "https://github.com/KanjiVG/kanjivg/releases/download/r20250816/kanjivg-20250816-main.zip",
+    tag: "r20250816",
+  },
+  kaishi: {
+    name: "Kaishi.1.5k.v2.4.1.apkg",
+    url: "https://github.com/donkuri/kaishi/releases/download/v2.4.1/Kaishi.1.5k.v2.4.1.apkg",
+    tag: "v2.4.1",
+  },
+};
 
 export type Manifest = {
   jmdict: { tag: string; jsonPath: string };
@@ -39,6 +68,7 @@ export async function resolveAndDownload(): Promise<Manifest> {
     "scriptin/jmdict-simplified",
     /^jmdict-eng-\d[\d.]*.*\.json\.tgz$/,
     /common|examples/,
+    PINNED.jmdict,
   );
   const jmTgz = await download(jm.url, path.join(RAW_DIR, jm.name));
   const jmJson = await extractTgz(jmTgz, RAW_DIR);
@@ -48,19 +78,21 @@ export async function resolveAndDownload(): Promise<Manifest> {
   const kd = await githubLatestAsset(
     "scriptin/jmdict-simplified",
     /^kanjidic2-en-\d[\d.]*.*\.json\.tgz$/,
+    undefined,
+    PINNED.kanjidic,
   );
   const kdTgz = await download(kd.url, path.join(RAW_DIR, kd.name));
   const kdJson = await extractTgz(kdTgz, RAW_DIR);
 
   // ── KanjiVG (stroke-order SVGs, "-main" archive) ────────────────────────────
   console.log("KanjiVG:");
-  const kv = await githubLatestAsset("KanjiVG/kanjivg", /-main\.zip$/);
+  const kv = await githubLatestAsset("KanjiVG/kanjivg", /-main\.zip$/, undefined, PINNED.kanjivg);
   const kvZip = await download(kv.url, path.join(RAW_DIR, kv.name));
   const kvDir = path.join(RAW_DIR, "kanjivg");
 
   // ── Kaishi 1.5k (.apkg) ─────────────────────────────────────────────────────
   console.log("Kaishi 1.5k:");
-  const ka = await githubLatestAsset("donkuri/kaishi", /\.apkg$/i);
+  const ka = await githubLatestAsset("donkuri/kaishi", /\.apkg$/i, undefined, PINNED.kaishi);
   const apkg = await download(ka.url, path.join(RAW_DIR, ka.name));
 
   // ── Tatoeba (sentences, links, audio metadata) ──────────────────────────────
