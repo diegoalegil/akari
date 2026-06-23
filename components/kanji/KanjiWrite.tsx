@@ -264,15 +264,18 @@ export function KanjiWrite({ items }: { items: KanjiWriteItem[] }) {
               Comprobar
             </button>
           ) : (
-            <div className="grid grid-cols-4 gap-2">
-              {GRADES.map((b) => (
-                <button key={b.g} disabled={pending} onClick={() => grade(b.g)} className="relative flex flex-col items-center gap-0.5 rounded-xl border py-2.5 transition-[transform,background-color] duration-[var(--motion-fast)] hover:bg-[color-mix(in_oklab,var(--btn)_14%,transparent)] active:scale-[0.97] disabled:opacity-50" style={{ borderColor: "color-mix(in oklab, var(--btn) 45%, transparent)", ["--btn" as string]: b.color }}>
-                  <span className="absolute right-1.5 top-1 hidden rounded border border-[var(--color-line)] px-1 text-[10px] text-[var(--color-fg-faint)] sm:block">{b.key}</span>
-                  <span className="text-sm font-medium" style={{ color: b.color }}>{b.label}</span>
-                  <span className="text-[11px] tabular-nums text-[var(--color-fg-faint)]">{item.intervals[KEYS[b.g - 1]]}</span>
-                </button>
-              ))}
-            </div>
+            <>
+              <p className="mb-2 text-center text-xs text-[var(--color-fg-faint)]">¿Qué tal lo recordaste? · el tiempo = cuándo vuelve</p>
+              <div className="grid grid-cols-4 gap-2">
+                {GRADES.map((b) => (
+                  <button key={b.g} disabled={pending} onClick={() => grade(b.g)} className="relative flex flex-col items-center gap-0.5 rounded-xl border py-2.5 transition-[transform,background-color] duration-[var(--motion-fast)] hover:bg-[color-mix(in_oklab,var(--btn)_14%,transparent)] active:scale-[0.97] disabled:opacity-50" style={{ borderColor: "color-mix(in oklab, var(--btn) 45%, transparent)", ["--btn" as string]: b.color }}>
+                    <span className="absolute right-1.5 top-1 hidden rounded border border-[var(--color-line)] px-1 text-[10px] text-[var(--color-fg-faint)] sm:block">{b.key}</span>
+                    <span className="text-sm font-medium" style={{ color: b.color }}>{b.label}</span>
+                    <span className="text-[11px] tabular-nums text-[var(--color-fg-faint)]">{item.intervals[KEYS[b.g - 1]]}</span>
+                  </button>
+                ))}
+              </div>
+            </>
           )}
         </div>
       </footer>

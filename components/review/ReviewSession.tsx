@@ -273,7 +273,7 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { c
                 <div className="col-start-1 row-start-1 grid place-items-center [backface-visibility:hidden]" aria-hidden={revealed}>
                   <div>
                     <div lang="ja" className="font-jp text-5xl font-medium leading-tight text-[var(--color-fg)] sm:text-6xl">{card.expression}</div>
-                    <p className="mt-6 text-sm text-[var(--color-fg-faint)]">Toca para mostrar · espacio</p>
+                    <p className="mt-6 text-sm text-[var(--color-fg-faint)]">Recuérdalo, luego toca para comprobar</p>
                   </div>
                 </div>
                 <div className="col-start-1 row-start-1 flex flex-col items-center justify-center gap-3 [backface-visibility:hidden] [transform:rotateY(180deg)]" aria-hidden={!revealed}>
@@ -291,7 +291,7 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { c
                     transition={{ duration: reduce ? 0.05 : 0.18, ease: EASE }}
                   >
                     <div lang="ja" className="font-jp text-5xl font-medium leading-tight text-[var(--color-fg)] sm:text-6xl">{card.expression}</div>
-                    <p className="mt-6 text-sm text-[var(--color-fg-faint)]">Toca para mostrar · espacio</p>
+                    <p className="mt-6 text-sm text-[var(--color-fg-faint)]">Recuérdalo, luego toca para comprobar</p>
                   </motion.div>
                 ) : (
                   <motion.div
@@ -364,7 +364,11 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { c
               Mostrar respuesta
             </button>
           ) : (
-            <div className="grid grid-cols-4 gap-2">
+            <>
+              <p className="mb-2 text-center text-xs text-[var(--color-fg-faint)]">
+                ¿Qué tal lo recordaste? · el tiempo = cuándo vuelve
+              </p>
+              <div className="grid grid-cols-4 gap-2">
               {GRADES.map((b) => (
                 <motion.button
                   key={b.g}
@@ -381,7 +385,8 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { c
                   <span className="text-[11px] tabular-nums text-[var(--color-fg-faint)]">{card.intervals[["again", "hard", "good", "easy"][b.g - 1] as keyof ReviewCard["intervals"]]}</span>
                 </motion.button>
               ))}
-            </div>
+              </div>
+            </>
           )}
         </div>
       </footer>

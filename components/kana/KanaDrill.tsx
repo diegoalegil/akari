@@ -217,14 +217,17 @@ export function KanaDrill({ items, mode, title }: { items: KanaQueueItem[]; mode
               {typedMode ? "Comprobar" : "Mostrar respuesta"}
             </button>
           ) : (
-            <div className="grid grid-cols-4 gap-2">
-              {GRADES.map((b) => (
-                <button key={b.g} disabled={pending} onClick={() => grade(b.g)} className="flex flex-col items-center gap-0.5 rounded-xl border py-2.5 transition-[transform] duration-[var(--motion-fast)] active:scale-[0.97] disabled:opacity-50" style={{ borderColor: "color-mix(in oklab, var(--btn) 45%, transparent)", ["--btn" as string]: b.color }}>
-                  <span className="text-sm font-medium" style={{ color: b.color }}>{b.label}</span>
-                  <span className="text-[11px] tabular-nums text-[var(--color-fg-faint)]">{item.intervals[KEYS[b.g - 1]]}</span>
-                </button>
-              ))}
-            </div>
+            <>
+              <p className="mb-2 text-center text-xs text-[var(--color-fg-faint)]">¿Qué tal lo recordaste? · el tiempo = cuándo vuelve</p>
+              <div className="grid grid-cols-4 gap-2">
+                {GRADES.map((b) => (
+                  <button key={b.g} disabled={pending} onClick={() => grade(b.g)} className="flex flex-col items-center gap-0.5 rounded-xl border py-2.5 transition-[transform] duration-[var(--motion-fast)] active:scale-[0.97] disabled:opacity-50" style={{ borderColor: "color-mix(in oklab, var(--btn) 45%, transparent)", ["--btn" as string]: b.color }}>
+                    <span className="text-sm font-medium" style={{ color: b.color }}>{b.label}</span>
+                    <span className="text-[11px] tabular-nums text-[var(--color-fg-faint)]">{item.intervals[KEYS[b.g - 1]]}</span>
+                  </button>
+                ))}
+              </div>
+            </>
           )}
         </div>
       </footer>
