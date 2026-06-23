@@ -18,7 +18,7 @@ export type DashboardData = {
   recentKanji: { literal: string; reading: string }[];
   // Other study surfaces, so the dashboard can be the single "today" hub.
   kanji: { due: number; newAvail: number };
-  kana: { due: number; newAvail: number };
+  kana: { due: number; newAvail: number; script: string };
 };
 
 function cleanReading(r: string): string {
@@ -112,7 +112,7 @@ export function getStreak(): number {
 export function getDashboard(): DashboardData {
   const db = getDb();
   if (!seeded(db)) {
-    return { seeded: false, newPerDay: 10, totals: { words: 0, kanji: 0, kana: 0 }, dueNow: 0, newRemaining: 0, reviewsToday: 0, streak: 0, kanjiInVocab: 0, recentKanji: [], kanji: { due: 0, newAvail: 0 }, kana: { due: 0, newAvail: 0 } };
+    return { seeded: false, newPerDay: 10, totals: { words: 0, kanji: 0, kana: 0 }, dueNow: 0, newRemaining: 0, reviewsToday: 0, streak: 0, kanjiInVocab: 0, recentKanji: [], kanji: { due: 0, newAvail: 0 }, kana: { due: 0, newAvail: 0, script: "hiragana" } };
   }
   const newPerDay = Number(getSetting("new_per_day", "10"));
   const recentKanji = (
@@ -145,13 +145,19 @@ export function getDashboard(): DashboardData {
   );
   const kanjiNotIntro = count(db, "SELECT count(*) c FROM card_state WHERE card_type='kanji' AND introduced_at IS NULL");
 
-  // Kana surface — due reviews; new room is per-script-capped, so sum both.
-  const kanaDue = count(
-    db,
-    "SELECT count(*) c FROM card_state WHERE card_type='kana' AND introduced_at IS NOT NULL AND due IS NOT NULL AND datetime(due) <= datetime('now')",
-  );
-  let kanaNew = 0;
+  // Kana surface — due reviews + new room (per-script-capped), and the script
+  // with the most to do so the hero/chain can deep-link into its drill.
+  let kanaDue = 0, kanaNew = 0, kanaScript = "hiragana", kanaBest = -1;
   for (const t of ["hiragana", "katakana"]) {
+    const dueT = (
+      db
+        .prepare(
+          `SELECT count(*) c FROM card_state cs JOIN kana k ON k.id = cs.card_id
+           WHERE cs.card_type='kana' AND k.type = ? AND cs.introduced_at IS NOT NULL
+             AND cs.due IS NOT NULL AND datetime(cs.due) <= datetime('now')`,
+        )
+        .get(t) as { c: number }
+    ).c;
     const introToday = (
       db
         .prepare(
@@ -169,7 +175,13 @@ export function getDashboard(): DashboardData {
         )
         .get(t) as { c: number }
     ).c;
-    kanaNew += Math.max(0, Math.min(20 - introToday, notIntro));
+    const newT = Math.max(0, Math.min(20 - introToday, notIntro));
+    kanaDue += dueT;
+    kanaNew += newT;
+    if (dueT + newT > kanaBest) {
+      kanaBest = dueT + newT;
+      kanaScript = t;
+    }
   }
 
   return {
@@ -190,6 +202,6 @@ export function getDashboard(): DashboardData {
     kanjiInVocab: count(db, "SELECT count(DISTINCT kanji_id) c FROM word_kanji"),
     recentKanji,
     kanji: { due: kanjiDue, newAvail: Math.max(0, Math.min(newPerDay - kanjiIntroToday, kanjiNotIntro)) },
-    kana: { due: kanaDue, newAvail: kanaNew },
+    kana: { due: kanaDue, newAvail: kanaNew, script: kanaScript },
   };
 }

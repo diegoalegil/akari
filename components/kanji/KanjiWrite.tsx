@@ -184,7 +184,7 @@ export function KanjiWrite({ items }: { items: KanjiWriteItem[] }) {
           <p className="text-sm text-[var(--color-fg-faint)]">Continuará…</p>
           {kanaReady > 0 ? (
             <div className="mt-2 flex flex-col items-center gap-3">
-              <button onClick={() => router.push("/kana")} className="rounded-xl bg-gradient-to-r from-[var(--color-akari)] to-[var(--color-ember)] px-5 py-2.5 font-semibold text-[var(--color-ink-deep)] shadow-[var(--akari-glow)] transition-[filter] hover:brightness-105">Practicar kana ({kanaReady}) →</button>
+              <button onClick={() => router.push(`/kana/drill?script=${kc.script}&mode=recognition`)} className="rounded-xl bg-gradient-to-r from-[var(--color-akari)] to-[var(--color-ember)] px-5 py-2.5 font-semibold text-[var(--color-ink-deep)] shadow-[var(--akari-glow)] transition-[filter] hover:brightness-105">Practicar kana ({kanaReady}) →</button>
               <button onClick={() => router.push("/")} className="text-sm text-[var(--color-fg-muted)] transition-colors hover:text-[var(--color-fg)]">Volver al inicio</button>
             </div>
           ) : (

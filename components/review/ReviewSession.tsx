@@ -203,7 +203,7 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", revie
     const next = kanjiReady > 0
       ? { href: "/kanji/write", label: `Escribir kanji (${kanjiReady})` }
       : kanaReady > 0
-        ? { href: "/kana", label: `Practicar kana (${kanaReady})` }
+        ? { href: `/kana/drill?script=${kc.script}&mode=recognition`, label: `Practicar kana (${kanaReady})` }
         : null;
     return (
       <motion.div

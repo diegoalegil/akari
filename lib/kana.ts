@@ -107,19 +107,22 @@ export function kanaMastery(type: KanaType): { known: number; total: number } {
 }
 
 /** Combined kana practice load (due reviews + new available) across both scripts,
- *  for the unified daily-session chain. */
-export function kanaCounts(limitNew = 20): { due: number; newAvail: number } {
+ *  plus the script with the most to do — so the daily chain can deep-link
+ *  straight into a drill instead of the trainer hub. */
+export function kanaCounts(limitNew = 20): { due: number; newAvail: number; script: KanaType } {
   const db = getDb();
-  if (!seeded(db)) return { due: 0, newAvail: 0 };
-  const due = (
-    db
-      .prepare(
-        "SELECT count(*) c FROM card_state WHERE card_type='kana' AND introduced_at IS NOT NULL AND due IS NOT NULL AND datetime(due) <= datetime('now')",
-      )
-      .get() as { c: number }
-  ).c;
-  let newAvail = 0;
-  for (const t of ["hiragana", "katakana"]) {
+  if (!seeded(db)) return { due: 0, newAvail: 0, script: "hiragana" };
+  let due = 0, newAvail = 0, bestScript: KanaType = "hiragana", bestLoad = -1;
+  for (const t of ["hiragana", "katakana"] as KanaType[]) {
+    const dueT = (
+      db
+        .prepare(
+          `SELECT count(*) c FROM card_state cs JOIN kana k ON k.id = cs.card_id
+           WHERE cs.card_type='kana' AND k.type = ? AND cs.introduced_at IS NOT NULL
+             AND cs.due IS NOT NULL AND datetime(cs.due) <= datetime('now')`,
+        )
+        .get(t) as { c: number }
+    ).c;
     const introToday = (
       db
         .prepare(
@@ -137,7 +140,13 @@ export function kanaCounts(limitNew = 20): { due: number; newAvail: number } {
         )
         .get(t) as { c: number }
     ).c;
-    newAvail += Math.max(0, Math.min(limitNew - introToday, notIntro));
+    const newT = Math.max(0, Math.min(limitNew - introToday, notIntro));
+    due += dueT;
+    newAvail += newT;
+    if (dueT + newT > bestLoad) {
+      bestLoad = dueT + newT;
+      bestScript = t;
+    }
   }
-  return { due, newAvail };
+  return { due, newAvail, script: bestScript };
 }

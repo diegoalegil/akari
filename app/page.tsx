@@ -113,7 +113,7 @@ export default function Home() {
                 </div>
               </div>
               <Link
-                href={kanjiReady > 0 ? "/kanji/write" : "/kana"}
+                href={kanjiReady > 0 ? "/kanji/write" : `/kana/drill?script=${d.kana.script}&mode=recognition`}
                 className="shrink-0 rounded-xl bg-gradient-to-r from-[var(--color-akari)] to-[var(--color-ember)] px-5 py-2.5 text-center font-semibold text-[var(--color-ink-deep)] shadow-[var(--akari-glow)] transition-[filter] hover:brightness-105"
               >
                 {kanjiReady > 0 ? "Escribir kanji" : "Practicar kana"} →
