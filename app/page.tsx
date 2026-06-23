@@ -18,6 +18,31 @@ function greeting(): string {
 
 const NF = new Intl.NumberFormat("es-ES");
 
+// Status line for a study surface: due reviews take priority over new cards,
+// falling back to a static description when nothing is waiting.
+function surfaceSub(due: number, newAvail: number, idle: string): string {
+  if (due > 0) return `${due} ${due === 1 ? "tarjeta lista" : "tarjetas listas"}`;
+  if (newAvail > 0) return `${newAvail} ${newAvail === 1 ? "nueva por empezar" : "nuevas por empezar"}`;
+  return idle;
+}
+
+function SurfaceTile({ href, title, sub, due, glyph, accent }: { href: string; title: string; sub: string; due: number; glyph: string; accent: string }) {
+  return (
+    <Link href={href} className="surface group relative flex items-center justify-between p-5 transition-colors hover:border-[var(--color-line-strong)]" style={{ ["--hover" as string]: accent }}>
+      <div>
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-[var(--color-fg)]">{title}</span>
+          {due > 0 && <span aria-hidden className="h-1.5 w-1.5 rounded-full" style={{ background: accent, boxShadow: `0 0 6px ${accent}` }} />}
+        </div>
+        <div className="text-sm text-[var(--color-fg-muted)]">{sub}</div>
+      </div>
+      <span lang="ja" className="font-jp text-3xl text-[var(--color-fg-faint)] transition-colors group-hover:[color:var(--hover)]">
+        {glyph}
+      </span>
+    </Link>
+  );
+}
+
 export default function Home() {
   const dbReady = useDbReady();
   if (!dbReady) return <Loading />;
@@ -127,27 +152,26 @@ export default function Home() {
         </Reveal>
       </div>
 
-      {/* Quick links */}
+      {/* Other study surfaces — kanji handwriting + kana, with live counts */}
       <Reveal delay={0.24}>
-        <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Link href="/kana" className="surface group flex items-center justify-between p-5 transition-colors hover:border-[var(--color-line-strong)]">
-            <div>
-              <div className="font-medium text-[var(--color-fg)]">Entrenador de kana</div>
-              <div className="text-sm text-[var(--color-fg-muted)]">{d.totals.kana} hiragana + katakana</div>
-            </div>
-            <span lang="ja" className="font-jp text-3xl text-[var(--color-fg-faint)] transition-colors group-hover:text-[var(--color-akari)]">
-              あ
-            </span>
-          </Link>
-          <Link href="/kanji" className="surface group flex items-center justify-between p-5 transition-colors hover:border-[var(--color-line-strong)]">
-            <div>
-              <div className="font-medium text-[var(--color-fg)]">Explorar kanji</div>
-              <div className="text-sm text-[var(--color-fg-muted)]">trazos, lecturas y JLPT</div>
-            </div>
-            <span lang="ja" className="font-jp text-3xl text-[var(--color-fg-faint)] transition-colors group-hover:text-[var(--color-ember)]">
-              字
-            </span>
-          </Link>
+        <h2 className="mb-3 mt-7 text-[10px] uppercase tracking-wider text-[var(--color-fg-faint)]">Practica también</h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <SurfaceTile
+            href={d.kanji.due + d.kanji.newAvail > 0 ? "/kanji/write" : "/kanji"}
+            title="Escribir kanji"
+            sub={surfaceSub(d.kanji.due, d.kanji.newAvail, "trazo a trazo, a mano")}
+            due={d.kanji.due}
+            glyph="書"
+            accent="var(--color-ember)"
+          />
+          <SurfaceTile
+            href="/kana"
+            title="Entrenador de kana"
+            sub={surfaceSub(d.kana.due, d.kana.newAvail, `${d.totals.kana} hiragana + katakana`)}
+            due={d.kana.due}
+            glyph="あ"
+            accent="var(--color-akari)"
+          />
         </div>
       </Reveal>
     </div>

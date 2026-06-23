@@ -15,6 +15,9 @@ export type DashboardData = {
   streak: number;
   kanjiInVocab: number;
   recentKanji: { literal: string; reading: string }[];
+  // Other study surfaces, so the dashboard can be the single "today" hub.
+  kanji: { due: number; newAvail: number };
+  kana: { due: number; newAvail: number };
 };
 
 function cleanReading(r: string): string {
@@ -102,7 +105,7 @@ export function getStreak(): number {
 export function getDashboard(): DashboardData {
   const db = getDb();
   if (!seeded(db)) {
-    return { seeded: false, newPerDay: 10, totals: { words: 0, kanji: 0, kana: 0 }, dueNow: 0, newRemaining: 0, reviewsToday: 0, streak: 0, kanjiInVocab: 0, recentKanji: [] };
+    return { seeded: false, newPerDay: 10, totals: { words: 0, kanji: 0, kana: 0 }, dueNow: 0, newRemaining: 0, reviewsToday: 0, streak: 0, kanjiInVocab: 0, recentKanji: [], kanji: { due: 0, newAvail: 0 }, kana: { due: 0, newAvail: 0 } };
   }
   const newPerDay = Number(getSetting("new_per_day", "10"));
   const recentKanji = (
@@ -124,6 +127,44 @@ export function getDashboard(): DashboardData {
   );
   const notIntroduced = count(db, "SELECT count(*) c FROM card_state WHERE card_type='word' AND introduced_at IS NULL");
 
+  // Kanji (handwriting) surface — due reviews + new still available today.
+  const kanjiDue = count(
+    db,
+    "SELECT count(*) c FROM card_state WHERE card_type='kanji' AND introduced_at IS NOT NULL AND due IS NOT NULL AND datetime(due) <= datetime('now')",
+  );
+  const kanjiIntroToday = count(
+    db,
+    "SELECT count(*) c FROM card_state WHERE card_type='kanji' AND introduced_at IS NOT NULL AND date(introduced_at,'localtime') = date('now','localtime')",
+  );
+  const kanjiNotIntro = count(db, "SELECT count(*) c FROM card_state WHERE card_type='kanji' AND introduced_at IS NULL");
+
+  // Kana surface — due reviews; new room is per-script-capped, so sum both.
+  const kanaDue = count(
+    db,
+    "SELECT count(*) c FROM card_state WHERE card_type='kana' AND introduced_at IS NOT NULL AND due IS NOT NULL AND datetime(due) <= datetime('now')",
+  );
+  let kanaNew = 0;
+  for (const t of ["hiragana", "katakana"]) {
+    const introToday = (
+      db
+        .prepare(
+          `SELECT count(*) c FROM card_state cs JOIN kana k ON k.id = cs.card_id
+           WHERE cs.card_type='kana' AND k.type = ? AND cs.introduced_at IS NOT NULL
+             AND date(cs.introduced_at,'localtime') = date('now','localtime')`,
+        )
+        .get(t) as { c: number }
+    ).c;
+    const notIntro = (
+      db
+        .prepare(
+          `SELECT count(*) c FROM card_state cs JOIN kana k ON k.id = cs.card_id
+           WHERE cs.card_type='kana' AND k.type = ? AND cs.introduced_at IS NULL`,
+        )
+        .get(t) as { c: number }
+    ).c;
+    kanaNew += Math.max(0, Math.min(20 - introToday, notIntro));
+  }
+
   return {
     seeded: true,
     newPerDay,
@@ -141,5 +182,7 @@ export function getDashboard(): DashboardData {
     streak: computeStreak(db),
     kanjiInVocab: count(db, "SELECT count(DISTINCT kanji_id) c FROM word_kanji"),
     recentKanji,
+    kanji: { due: kanjiDue, newAvail: Math.max(0, Math.min(newPerDay - kanjiIntroToday, kanjiNotIntro)) },
+    kana: { due: kanaDue, newAvail: kanaNew },
   };
 }
