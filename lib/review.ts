@@ -7,13 +7,14 @@ import { safeParseArray } from "./json";
 // with everything the client needs to render each card and the next-interval
 // preview for the four grade buttons. Kanji/kana have their own surfaces.
 
-export type ReviewSentence = { jp: string; en: string | null; audio: string | null };
+export type ReviewSentence = { jp: string; furigana: string | null; en: string | null; audio: string | null };
 
 export type ReviewCard = {
   cardType: "word";
   cardId: number;
   isNew: boolean;
   expression: string;
+  furigana: string | null; // Anki ruby for the headword (validated Kaishi data)
   reading: string;
   meaning: string;
   audio: string | null;
@@ -25,19 +26,19 @@ export type ReviewCard = {
 type Row = Record<string, unknown>;
 
 function buildCard(db: ReturnType<typeof getDb>, id: number, isNew: boolean, now: Date): ReviewCard | null {
-  const w = db.prepare("SELECT expression, reading, meaning_en, meaning_es, audio_path FROM words WHERE id = ?").get(id) as Row | undefined;
+  const w = db.prepare("SELECT expression, reading, furigana, meaning_en, meaning_es, audio_path FROM words WHERE id = ?").get(id) as Row | undefined;
   const cs0 = db.prepare("SELECT fsrs_card FROM card_state WHERE card_type='word' AND card_id = ?").get(id) as Row | undefined;
   if (!w || !cs0) return null;
   const sentences = (
     db
       .prepare(
-        `SELECT s.jp jp, s.en en, s.es es,
+        `SELECT s.jp jp, s.furigana furigana, s.en en, s.es es,
                 (SELECT file_path FROM sentence_audio WHERE sentence_id = s.id LIMIT 1) audio
          FROM word_sentences ws JOIN sentences s ON s.id = ws.sentence_id
          WHERE ws.word_id = ? ORDER BY ws.rank ASC LIMIT 2`,
       )
       .all(id) as Row[]
-  ).map((r) => ({ jp: r.jp as string, en: ((r.es as string) ?? (r.en as string)) ?? null, audio: (r.audio as string) ?? null }));
+  ).map((r) => ({ jp: r.jp as string, furigana: (r.furigana as string) ?? null, en: ((r.es as string) ?? (r.en as string)) ?? null, audio: (r.audio as string) ?? null }));
   const kanji = (
     db
       .prepare("SELECT k.literal literal, k.meanings meanings, k.meanings_es meanings_es FROM word_kanji wk JOIN kanji k ON k.id = wk.kanji_id WHERE wk.word_id = ?")
@@ -49,6 +50,7 @@ function buildCard(db: ReturnType<typeof getDb>, id: number, isNew: boolean, now
     cardId: id,
     isNew,
     expression: w.expression as string,
+    furigana: (w.furigana as string) ?? null,
     reading: w.reading as string,
     meaning: ((w.meaning_es as string) ?? (w.meaning_en as string)) as string,
     audio: (w.audio_path as string) ?? null,

@@ -76,7 +76,8 @@ export function Settings({ initial }: { initial: AppSettings }) {
   useEffect(() => {
     document.documentElement.dataset.theme = s.theme;
     document.documentElement.classList.toggle("reduce-motion", s.reducedMotion);
-  }, [s.theme, s.reducedMotion]);
+    document.documentElement.classList.toggle("no-furigana", !s.furigana);
+  }, [s.theme, s.reducedMotion, s.furigana]);
 
   const save = (key: string, value: string) => { updateSetting(key, value).catch(() => setSaveError(true)); };
   const setNum = (v: number) => { const n = Math.max(0, Math.min(100, v)); setS((p) => ({ ...p, newPerDay: n })); save("new_per_day", String(n)); };
@@ -107,6 +108,9 @@ export function Settings({ initial }: { initial: AppSettings }) {
                 <button key={v} onClick={() => setStr("cardAnim", "card_anim", v)} className={`rounded-md px-3 py-1.5 transition-colors ${s.cardAnim === v ? "bg-[color-mix(in_oklab,var(--color-indigo)_18%,transparent)] text-[var(--color-fg)]" : "text-[var(--color-fg-muted)]"}`}>{l}</button>
               ))}
             </div>
+          </Row>
+          <Row title="Furigana" desc="Lecturas sobre los kanji (reverso y frases)">
+            <Toggle on={s.furigana} onChange={(v) => setBool("furigana", "furigana", v)} />
           </Row>
         </Section>
 

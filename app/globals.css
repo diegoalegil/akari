@@ -103,6 +103,23 @@ body {
   font-family: var(--font-jp);
 }
 
+/* Furigana ruby — readings sit above the kanji, de-emphasized. Hidden (but the
+   base kanji stay) when the user turns furigana off, via a class on <html>. */
+ruby {
+  ruby-align: center;
+}
+rt {
+  font-size: 0.5em;
+  font-weight: 400;
+  line-height: 1.1;
+  color: var(--color-fg-muted);
+  user-select: none;
+  letter-spacing: 0.02em;
+}
+html.no-furigana rt {
+  display: none;
+}
+
 /* The lantern glow — a soft warm bloom. Use sparingly; it's the signature. */
 .glow-ember {
   box-shadow:

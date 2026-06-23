@@ -6,6 +6,7 @@ import type { ReviewCard } from "@/lib/review";
 import { gradeCard } from "@/app/review/actions";
 import { Lantern } from "@/components/Lantern";
 import { Explain } from "@/components/explain/Explain";
+import { Furigana } from "@/components/Furigana";
 import { playSound } from "@/lib/sound";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -211,7 +212,7 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { c
   // Card back content (reading + meaning + audio), shared by both flip modes.
   const Back = (
     <>
-      <div lang="ja" aria-label={headLabel} className="font-jp text-4xl font-medium leading-tight text-[var(--color-fg)] sm:text-5xl">{card.expression}</div>
+      <div lang="ja" aria-label={headLabel} className="font-jp text-4xl font-medium leading-tight text-[var(--color-fg)] sm:text-5xl"><Furigana text={card.furigana} fallback={card.expression} /></div>
       <div className="flex items-center gap-3">
         <span lang="ja" aria-hidden className="font-jp text-xl text-[var(--color-ember)]">{card.reading}</span>
         {card.audio && <Speaker src={`/${card.audio}`} label="Pronunciación" />}
@@ -324,7 +325,7 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { c
                 {card.sentences.map((s, i) => (
                   <div key={i} className="surface p-4">
                     <div className="flex items-start justify-between gap-3">
-                      <p lang="ja" className="font-jp text-lg leading-relaxed text-[var(--color-fg)]">{s.jp}</p>
+                      <p lang="ja" className="font-jp text-lg leading-relaxed text-[var(--color-fg)]"><Furigana text={s.furigana} fallback={s.jp} /></p>
                       {s.audio && <Speaker src={`/${s.audio}`} label="Audio de la frase" />}
                     </div>
                     {s.en && <p className="mt-1 text-sm text-[var(--color-fg-muted)]">{s.en}</p>}
