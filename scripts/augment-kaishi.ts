@@ -71,6 +71,11 @@ function canonRuby(s: string): string {
     .trim();
 }
 
+// Strip ruby readings down to the rendered surface, mirroring the RUBY token
+// class in lib/furigana.ts so this matches exactly what the learner sees.
+const RUBY = /([0-9０-９㐀-鿿々〆ヶ]+)\[([^\]]+)\]/g;
+const rubyStripSurface = (s: string) => cleanJp(s.replace(RUBY, "$1"));
+
 function hasColumn(db: Database.Database, table: string, col: string): boolean {
   return (db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).some((c) => c.name === col);
 }
@@ -92,7 +97,13 @@ for (const r of rows) {
   if (wf) wordFuri.set(expr + FS + reading, wf);
   const sjp = cleanJp(f[F.sentence] ?? "");
   const sf = canonRuby(f[F.sentenceFurigana] ?? "");
-  if (sjp && sf) sentFuri.set(sjp, sf);
+  // Kaishi's Sentence and SentenceFurigana fields occasionally disagree on the
+  // verb form / orthography (しよっか vs しようか, 連れてきました vs 連れて来ました,
+  // an extra dialogue colon). Only keep furigana whose ruby-stripped surface
+  // matches the sentence actually studied; otherwise leave it NULL so the render
+  // falls back to the validated jp — a deterministic consistency check between
+  // two source fields, inventing nothing.
+  if (sjp && sf && rubyStripSurface(sf) === sjp) sentFuri.set(sjp, sf);
   const pitch = parsePitch(f[F.pitch] ?? "");
   if (pitch) pitchMap.set(expr + FS + reading, pitch);
 }
