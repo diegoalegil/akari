@@ -168,6 +168,8 @@ async function upgradeToSeed(SQL: Awaited<ReturnType<typeof initSqlJs>>, oldDb: 
   // Don't commit the version bump against a STALE seed (e.g. a service worker
   // briefly served the previous deploy). If the expected new content isn't
   // there, bail so we retry on the next load instead of pinning bad content.
+  // PER-VERSION MARKER: on every SEED_VERSION bump, change this to the newest
+  // column/table added by that version (else a stale prior-version seed passes).
   const fresh = (newDb.exec("PRAGMA table_info(words)")[0]?.values as unknown[][] | undefined)?.some((c) => c[1] === "pitch_accent");
   if (!fresh) {
     newDb.close();
@@ -226,7 +228,12 @@ export async function loadClientDb(): Promise<ClientDb> {
     ensureColumns(db);
     instance = new ClientDb(db);
     return instance;
-  })();
+  })().catch((e) => {
+    // Don't cache a rejection (e.g. first-ever load while offline) — null the
+    // memo so a later call retries instead of replaying the failure forever.
+    loading = null;
+    throw e;
+  });
   return loading;
 }
 

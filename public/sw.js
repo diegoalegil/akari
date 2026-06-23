@@ -90,7 +90,12 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     (async () => {
       const cache = await caches.open(CACHE);
-      const cached = await cache.match(request);
+      // The seed DB is fetched with a ?v= cache-buster; match the query-less
+      // precached entry so it's available offline on the very first load.
+      const cached =
+        url.pathname === "/akari.db.gz"
+          ? await cache.match(request, { ignoreSearch: true })
+          : await cache.match(request);
       if (cached) return cached;
 
       try {
