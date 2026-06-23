@@ -270,16 +270,21 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", revie
   // Card front, by review mode: listen = a play button (train the ear), produce
   // = the meaning to recall the word from (the hardest direction), normal = the
   // word to recall its reading/meaning.
-  const Front = reviewMode === "listen" && card.audio ? (
+  const Front = reviewMode === "listen" ? (
+    // Listen mode must NOT show the headword (that defeats training the ear), so
+    // it never falls through to the normal front — even for the rare audio-less
+    // card, which simply shows the prompt with no play button to tap.
     <>
-      <button
-        type="button"
-        onClick={(e) => { e.stopPropagation(); playWord(); }}
-        aria-label="Reproducir audio"
-        className="mx-auto grid h-20 w-20 place-items-center rounded-full border border-[var(--color-line-strong)] text-[var(--color-ember)] transition-colors hover:border-[var(--color-ember)]"
-      >
-        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5Z" /><path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" /></svg>
-      </button>
+      {card.audio && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); playWord(); }}
+          aria-label="Reproducir audio"
+          className="mx-auto grid h-20 w-20 place-items-center rounded-full border border-[var(--color-line-strong)] text-[var(--color-ember)] transition-colors hover:border-[var(--color-ember)]"
+        >
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5Z" /><path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" /></svg>
+        </button>
+      )}
       <p className="mt-6 text-sm text-[var(--color-fg-faint)]">Escucha y recuerda · toca para comprobar</p>
     </>
   ) : reviewMode === "produce" ? (
