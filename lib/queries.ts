@@ -55,7 +55,7 @@ export type AppSettings = {
   sound: boolean; // UI sound effects
   furigana: boolean; // show reading ruby over kanji
   pitch: boolean; // show the pitch-accent contour over readings
-  listen: boolean; // listening mode: hear the word first instead of seeing it
+  reviewMode: string; // normal (see word) | listen (hear it) | produce (see meaning)
   hasApiKey: boolean; // whether Explícame is configured (env OR in-app key) — never the key itself
 };
 
@@ -69,7 +69,7 @@ export function getSettings(): AppSettings {
     sound: getSetting("sound", "1") === "1",
     furigana: getSetting("furigana", "1") === "1",
     pitch: getSetting("pitch", "1") === "1",
-    listen: getSetting("review_listen", "0") === "1",
+    reviewMode: getSetting("review_mode", "normal"),
     hasApiKey: !!process.env.ANTHROPIC_API_KEY || getSetting("anthropic_api_key", "").trim().length > 0,
   };
 }

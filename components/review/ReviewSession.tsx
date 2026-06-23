@@ -89,7 +89,7 @@ function Speaker({ src, label = "Reproducir audio", big = false }: { src: string
 
 const BLANK_INTERVALS = { again: "", hard: "", good: "", easy: "" };
 
-export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", listen = false }: { cards: ReviewCard[]; autoplay?: boolean; cardAnim?: string; listen?: boolean }) {
+export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", reviewMode = "normal" }: { cards: ReviewCard[]; autoplay?: boolean; cardAnim?: string; reviewMode?: string }) {
   const router = useRouter();
   const reduce = useReducedMotion();
   const [queue, setQueue] = useState<ReviewCard[]>(cards);
@@ -158,10 +158,10 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", liste
   // Listening mode: play the word as each new card appears, so you recall from
   // sound before seeing it. (Re-plays on reveal via the normal autoplay path.)
   useEffect(() => {
-    if (!listen || revealed || !card?.audio) return;
+    if (reviewMode !== "listen" || revealed || !card?.audio) return;
     const t = setTimeout(playWord, 220);
     return () => clearTimeout(t);
-  }, [idx, listen, revealed, card, playWord]);
+  }, [idx, reviewMode, revealed, card, playWord]);
 
   // Keyboard: Space/Enter reveals, 1–4 grade, J replays audio.
   useEffect(() => {
@@ -259,9 +259,10 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", liste
     </>
   );
 
-  // Card front — the word to recall, or (listening mode) just a play button so
-  // you train comprehension by ear before seeing the word.
-  const Front = listen && card.audio ? (
+  // Card front, by review mode: listen = a play button (train the ear), produce
+  // = the meaning to recall the word from (the hardest direction), normal = the
+  // word to recall its reading/meaning.
+  const Front = reviewMode === "listen" && card.audio ? (
     <>
       <button
         type="button"
@@ -272,6 +273,11 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", liste
         <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5Z" /><path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" /></svg>
       </button>
       <p className="mt-6 text-sm text-[var(--color-fg-faint)]">Escucha y recuerda · toca para comprobar</p>
+    </>
+  ) : reviewMode === "produce" ? (
+    <>
+      <div className="text-pretty text-2xl font-medium leading-snug text-[var(--color-fg)] sm:text-3xl">{card.meaning}</div>
+      <p className="mt-6 text-sm text-[var(--color-fg-faint)]">¿Cómo se dice en japonés? · toca para comprobar</p>
     </>
   ) : (
     <>

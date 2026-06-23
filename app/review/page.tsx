@@ -32,6 +32,6 @@ export default function ReviewPage() {
     );
   }
 
-  const { autoplay, cardAnim, listen } = getSettings();
-  return <ReviewSession cards={cards} autoplay={autoplay} cardAnim={cardAnim} listen={listen} />;
+  const { autoplay, cardAnim, reviewMode } = getSettings();
+  return <ReviewSession cards={cards} autoplay={autoplay} cardAnim={cardAnim} reviewMode={reviewMode} />;
 }
