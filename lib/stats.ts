@@ -15,11 +15,15 @@ export type Stats = {
   heatmapMax: number;
   jlpt: { level: string; total: number; known: number }[];
   forecast: { date: string; count: number }[]; // next 14 days
+  // Kanji handwriting surface (KANJIDIC2 school grade = clean 1–6 jōyō scale).
+  kanji: { introduced: number; known: number; total: number };
+  kanjiByGrade: { label: string; total: number; known: number }[];
 };
 
 const EMPTY: Stats = {
   retention: null, streak: 0, viewsToday: 0, mastery: null, totalReviews: 0,
   heatmap: [], heatmapMax: 0, jlpt: [5, 4, 3, 2, 1].map((l) => ({ level: `N${l}`, total: 0, known: 0 })), forecast: [],
+  kanji: { introduced: 0, known: 0, total: 0 }, kanjiByGrade: [],
 };
 
 export function getStats(): Stats {
@@ -84,6 +88,29 @@ export function getStats(): Stats {
     forecast.push({ date: key, count: c });
   }
 
+  // Kanji handwriting mastery, overall + by school grade (1–6 jōyō; 7+ → "+").
+  const kanjiTotal = n(db, "SELECT count(*) c FROM card_state WHERE card_type='kanji'");
+  const kanjiIntroduced = n(db, "SELECT count(*) c FROM card_state WHERE card_type='kanji' AND introduced_at IS NOT NULL");
+  const kanjiKnown = n(db, "SELECT count(*) c FROM card_state WHERE card_type='kanji' AND state = 2");
+  const gradeRows = db
+    .prepare(
+      `SELECT k.grade g, count(*) total, sum(CASE WHEN cs.state = 2 THEN 1 ELSE 0 END) known
+       FROM kanji k JOIN card_state cs ON cs.card_type='kanji' AND cs.card_id = k.id GROUP BY k.grade`,
+    )
+    .all() as Row[];
+  const gradeBuckets = new Map<string, { total: number; known: number }>();
+  for (const r of gradeRows) {
+    const g = r.g as number | null;
+    const label = g != null && g >= 1 && g <= 6 ? `${g}º` : "+";
+    const cur = gradeBuckets.get(label) ?? { total: 0, known: 0 };
+    cur.total += r.total as number;
+    cur.known += (r.known as number) || 0;
+    gradeBuckets.set(label, cur);
+  }
+  const kanjiByGrade = ["1º", "2º", "3º", "4º", "5º", "6º", "+"]
+    .filter((l) => gradeBuckets.has(l))
+    .map((l) => ({ label: l, ...gradeBuckets.get(l)! }));
+
   return {
     retention: totalReviews ? passed / totalReviews : null,
     streak: computeStreak(db),
@@ -94,5 +121,7 @@ export function getStats(): Stats {
     heatmapMax,
     jlpt,
     forecast,
+    kanji: { introduced: kanjiIntroduced, known: kanjiKnown, total: kanjiTotal },
+    kanjiByGrade,
   };
 }

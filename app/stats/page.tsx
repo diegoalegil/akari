@@ -65,22 +65,33 @@ export default function StatsPage() {
       </section>
 
       <div className="mt-5 grid gap-5 md:grid-cols-2">
-        {/* JLPT mastery */}
+        {/* Kanji handwriting mastery — by school grade */}
         <section className="surface p-5">
-          <div className="text-[10px] uppercase tracking-wider text-[var(--color-fg-faint)]">Dominio</div>
-          <h2 className="mt-0.5 font-medium text-[var(--color-fg)]">Por nivel JLPT</h2>
-          {s.jlpt.every((j) => j.total === 0) ? (
-            <p className="mt-4 text-sm text-[var(--color-fg-faint)]">Niveles JLPT pendientes de etiquetar.</p>
+          <div className="flex items-baseline justify-between">
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-[var(--color-fg-faint)]">Dominio</div>
+              <h2 className="mt-0.5 font-medium text-[var(--color-fg)]">Trazos de kanji</h2>
+            </div>
+            <div className="text-right">
+              <div className="text-lg font-semibold tabular-nums text-[var(--color-fg)]">
+                {s.kanji.known}
+                <span className="text-sm font-normal text-[var(--color-fg-faint)]"> / {s.kanji.total}</span>
+              </div>
+              <div className="text-[11px] text-[var(--color-fg-faint)]">{s.kanji.introduced} empezados</div>
+            </div>
+          </div>
+          {s.kanjiByGrade.length === 0 ? (
+            <p className="mt-4 text-sm text-[var(--color-fg-faint)]">Aún no hay kanji para escribir.</p>
           ) : (
             <div className="mt-4 flex flex-col gap-3">
-              {s.jlpt.map((j) => (
-                <div key={j.level}>
+              {s.kanjiByGrade.map((g) => (
+                <div key={g.label}>
                   <div className="flex justify-between text-sm">
-                    <span className="text-[var(--color-fg-muted)]">{j.level}</span>
-                    <span className="tabular-nums text-[var(--color-fg-faint)]">{j.known} / {j.total}</span>
+                    <span className="text-[var(--color-fg-muted)]">{g.label === "+" ? "Avanzado" : `Grado ${g.label}`}</span>
+                    <span className="tabular-nums text-[var(--color-fg-faint)]">{g.known} / {g.total}</span>
                   </div>
                   <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-[var(--color-surface-3)]">
-                    <div className="h-full rounded-full bg-gradient-to-r from-[var(--color-good)] to-[var(--color-easy)]" style={{ width: `${j.total ? (j.known / j.total) * 100 : 0}%` }} />
+                    <div className="h-full rounded-full bg-gradient-to-r from-[var(--color-ember)] to-[var(--color-akari)]" style={{ width: `${g.total ? (g.known / g.total) * 100 : 0}%` }} />
                   </div>
                 </div>
               ))}
