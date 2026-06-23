@@ -1,5 +1,11 @@
-/* Akari offline service worker — hand-written, no build step. */
-const CACHE = "akari-v1";
+/* Akari offline service worker — hand-written, no build step in dev.
+ *
+ * The CACHE version and the list of hashed _next build assets are filled in at
+ * build time by scripts/postbuild-sw.ts (it rewrites out/sw.js after `next
+ * build`). In dev the SW isn't registered (prod-only), so the placeholders are
+ * harmless. Precaching the build's JS/CSS/font chunks is what makes the app
+ * actually boot offline — index.html alone is useless without its chunks. */
+const CACHE = "akari-__BUILD_ID__";
 
 const PRECACHE_URLS = [
   "/",
@@ -7,6 +13,9 @@ const PRECACHE_URLS = [
   "/sql-wasm.wasm",
   "/manifest.webmanifest",
   "/icon.svg",
+  "/apple-touch-icon.png",
+  "/icon-192.png",
+  // __NEXT_ASSETS__ (replaced at build with the hashed _next/static chunks)
 ];
 
 self.addEventListener("install", (event) => {
@@ -56,7 +65,8 @@ self.addEventListener("fetch", (event) => {
   }
   if (url.origin !== self.location.origin) return;
 
-  // Navigation requests: network-first, fall back to app shell, then cache.
+  // Navigation requests: network-first, fall back to the exact cached page,
+  // then the app shell.
   if (request.mode === "navigate") {
     event.respondWith(
       (async () => {
@@ -64,10 +74,10 @@ self.addEventListener("fetch", (event) => {
           return await fetch(request);
         } catch (_) {
           const cache = await caches.open(CACHE);
-          const shell = await cache.match("/");
-          if (shell) return shell;
           const cached = await cache.match(request);
           if (cached) return cached;
+          const shell = await cache.match("/");
+          if (shell) return shell;
           return Response.error();
         }
       })()
@@ -75,7 +85,8 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Other GETs: cache-first, then network with stale-while-revalidate caching.
+  // Other GETs: cache-first (the _next chunks are content-hashed → immutable),
+  // then network, caching successful same-origin responses for next time.
   event.respondWith(
     (async () => {
       const cache = await caches.open(CACHE);
