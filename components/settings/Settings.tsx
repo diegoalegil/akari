@@ -117,6 +117,9 @@ export function Settings({ initial }: { initial: AppSettings }) {
           <Row title="Acento tonal" desc="Contorno tonal sobre la lectura">
             <Toggle label="Acento tonal" on={s.pitch} onChange={(v) => setBool("pitch", "pitch", v)} />
           </Row>
+          <Row title="Modo escucha" desc="Oye la palabra antes de verla">
+            <Toggle label="Modo escucha" on={s.listen} onChange={(v) => setBool("listen", "review_listen", v)} />
+          </Row>
         </Section>
 
         <section>

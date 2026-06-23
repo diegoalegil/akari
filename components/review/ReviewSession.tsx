@@ -89,7 +89,7 @@ function Speaker({ src, label = "Reproducir audio", big = false }: { src: string
 
 const BLANK_INTERVALS = { again: "", hard: "", good: "", easy: "" };
 
-export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { cards: ReviewCard[]; autoplay?: boolean; cardAnim?: string }) {
+export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", listen = false }: { cards: ReviewCard[]; autoplay?: boolean; cardAnim?: string; listen?: boolean }) {
   const router = useRouter();
   const reduce = useReducedMotion();
   const [queue, setQueue] = useState<ReviewCard[]>(cards);
@@ -154,6 +154,14 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { c
     },
     [revealed, pending, card],
   );
+
+  // Listening mode: play the word as each new card appears, so you recall from
+  // sound before seeing it. (Re-plays on reveal via the normal autoplay path.)
+  useEffect(() => {
+    if (!listen || revealed || !card?.audio) return;
+    const t = setTimeout(playWord, 220);
+    return () => clearTimeout(t);
+  }, [idx, listen, revealed, card, playWord]);
 
   // Keyboard: Space/Enter reveals, 1–4 grade, J replays audio.
   useEffect(() => {
@@ -251,6 +259,27 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { c
     </>
   );
 
+  // Card front — the word to recall, or (listening mode) just a play button so
+  // you train comprehension by ear before seeing the word.
+  const Front = listen && card.audio ? (
+    <>
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); playWord(); }}
+        aria-label="Reproducir audio"
+        className="mx-auto grid h-20 w-20 place-items-center rounded-full border border-[var(--color-line-strong)] text-[var(--color-ember)] transition-colors hover:border-[var(--color-ember)]"
+      >
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5Z" /><path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" /></svg>
+      </button>
+      <p className="mt-6 text-sm text-[var(--color-fg-faint)]">Escucha y recuerda · toca para comprobar</p>
+    </>
+  ) : (
+    <>
+      <div lang="ja" className="font-jp text-5xl font-medium leading-tight text-[var(--color-fg)] sm:text-6xl">{card.expression}</div>
+      <p className="mt-6 text-sm text-[var(--color-fg-faint)]">Recuérdalo, luego toca para comprobar</p>
+    </>
+  );
+
   return (
     <motion.div
       className="fixed inset-0 z-40 flex flex-col bg-[var(--color-ink)]"
@@ -303,10 +332,7 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { c
                 transition={{ duration: 0.5, ease: EASE }}
               >
                 <div className="col-start-1 row-start-1 grid place-items-center [backface-visibility:hidden]" aria-hidden={revealed}>
-                  <div>
-                    <div lang="ja" className="font-jp text-5xl font-medium leading-tight text-[var(--color-fg)] sm:text-6xl">{card.expression}</div>
-                    <p className="mt-6 text-sm text-[var(--color-fg-faint)]">Recuérdalo, luego toca para comprobar</p>
-                  </div>
+                  <div>{Front}</div>
                 </div>
                 <div className="col-start-1 row-start-1 flex flex-col items-center justify-center gap-3 [backface-visibility:hidden] [transform:rotateY(180deg)]" aria-hidden={!revealed}>
                   {Back}
@@ -322,8 +348,7 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { c
                     exit={reduce ? { opacity: 0 } : { opacity: 0, rotateY: -8 }}
                     transition={{ duration: reduce ? 0.05 : 0.18, ease: EASE }}
                   >
-                    <div lang="ja" className="font-jp text-5xl font-medium leading-tight text-[var(--color-fg)] sm:text-6xl">{card.expression}</div>
-                    <p className="mt-6 text-sm text-[var(--color-fg-faint)]">Recuérdalo, luego toca para comprobar</p>
+                    {Front}
                   </motion.div>
                 ) : (
                   <motion.div
