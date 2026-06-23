@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS words (
   kaishi_order   INTEGER,            -- study sequence from the Kaishi deck
   expression     TEXT NOT NULL,      -- canonical surface form (from Kaishi)
   reading        TEXT NOT NULL,      -- canonical reading (from Kaishi)
+  furigana       TEXT,               -- Kaishi Word Furigana ruby, e.g. "好[す]き" (validated; filled by augment-kaishi)
   meaning_en     TEXT NOT NULL,      -- gloss from the JMdict entry matched by (expr+reading)
   meaning_es     TEXT,               -- EN→ES translation (build-time, cached in db/translations.es.json)
   meaning_source TEXT NOT NULL CHECK (meaning_source IN ('jmdict', 'kaishi')),
@@ -55,11 +56,12 @@ CREATE TABLE IF NOT EXISTS word_kanji (
 
 -- ── Example sentences (Tatoeba primary, Kaishi bundled fallback) ──────────────
 CREATE TABLE IF NOT EXISTS sentences (
-  id     INTEGER PRIMARY KEY,
-  jp     TEXT NOT NULL,
-  en     TEXT,
-  es     TEXT,                       -- EN→ES translation (build-time, cached)
-  source TEXT NOT NULL CHECK (source IN ('tatoeba', 'kaishi'))
+  id       INTEGER PRIMARY KEY,
+  jp       TEXT NOT NULL,
+  en       TEXT,
+  es       TEXT,                     -- EN→ES translation (build-time, cached)
+  furigana TEXT,                     -- canonical Kaishi Sentence Furigana ruby (validated; Kaishi sentences only)
+  source   TEXT NOT NULL CHECK (source IN ('tatoeba', 'kaishi'))
 );
 
 CREATE TABLE IF NOT EXISTS sentence_audio (
