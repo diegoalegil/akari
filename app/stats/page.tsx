@@ -1,6 +1,7 @@
 "use client";
 import { getStats } from "@/lib/stats";
 import { Loading } from "@/components/Loading";
+import { Furigana } from "@/components/Furigana";
 import { useDbReady } from "@/lib/useDb";
 
 const pct = (v: number | null) => (v == null ? "—" : `${Math.round(v * 100)}%`);
@@ -151,8 +152,7 @@ export default function StatsPage() {
             {s.leeches.map((w) => (
               <li key={w.expression} className="flex items-center justify-between gap-3 py-2.5">
                 <div className="min-w-0">
-                  <span lang="ja" className="font-jp text-lg text-[var(--color-fg)]">{w.expression}</span>
-                  <span lang="ja" className="font-jp ml-2 text-sm text-[var(--color-ember)]">{w.reading}</span>
+                  <span lang="ja" className="font-jp text-lg leading-relaxed text-[var(--color-fg)]"><Furigana text={w.furigana} fallback={w.expression} /></span>
                   <span className="ml-2 text-sm text-[var(--color-fg-muted)]">· {w.meaning}</span>
                 </div>
                 <span className="shrink-0 rounded-full bg-[color-mix(in_oklab,var(--color-again)_18%,transparent)] px-2 py-0.5 text-xs font-medium tabular-nums text-[var(--color-again)]">

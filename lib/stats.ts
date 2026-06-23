@@ -19,7 +19,7 @@ export type Stats = {
   kanji: { introduced: number; known: number; total: number };
   kanjiByGrade: { label: string; total: number; known: number }[];
   // "Leeches" — words you keep forgetting (many FSRS lapses), worth extra focus.
-  leeches: { expression: string; reading: string; meaning: string; lapses: number }[];
+  leeches: { expression: string; furigana: string | null; reading: string; meaning: string; lapses: number }[];
 };
 
 const EMPTY: Stats = {
@@ -117,7 +117,7 @@ export function getStats(): Stats {
   const leeches = (
     db
       .prepare(
-        `SELECT w.expression expression, w.reading reading,
+        `SELECT w.expression expression, w.furigana furigana, w.reading reading,
                 COALESCE(w.meaning_es, w.meaning_en) meaning, cs.fsrs_lapses lapses
          FROM card_state cs JOIN words w ON w.id = cs.card_id
          WHERE cs.card_type='word' AND cs.fsrs_lapses >= 4
@@ -126,6 +126,7 @@ export function getStats(): Stats {
       .all() as Row[]
   ).map((r) => ({
     expression: r.expression as string,
+    furigana: (r.furigana as string) ?? null,
     reading: r.reading as string,
     meaning: r.meaning as string,
     lapses: r.lapses as number,

@@ -2,7 +2,7 @@ import { getDb } from "@/lib/db";
 import { seeded } from "@/lib/queries";
 
 export type SearchResults = {
-  words: { expression: string; reading: string; meaning: string }[];
+  words: { expression: string; furigana: string | null; reading: string; meaning: string }[];
   kanji: { literal: string; meaning: string }[];
 };
 
@@ -15,11 +15,11 @@ export async function searchAll(query: string): Promise<SearchResults> {
   const words = (
     db
       .prepare(
-        `SELECT expression, reading, COALESCE(meaning_es, meaning_en) meaning FROM words
+        `SELECT expression, furigana, reading, COALESCE(meaning_es, meaning_en) meaning FROM words
          WHERE expression LIKE ? OR reading LIKE ? OR meaning_es LIKE ? OR meaning_en LIKE ?
          ORDER BY kaishi_order LIMIT 24`,
       )
-      .all(like, like, like, like) as { expression: string; reading: string; meaning: string }[]
+      .all(like, like, like, like) as { expression: string; furigana: string | null; reading: string; meaning: string }[]
   );
 
   const kanji = (

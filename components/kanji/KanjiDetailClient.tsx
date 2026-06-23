@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { KanjiStrokes } from "@/components/kanji/KanjiStrokes";
 import { Explain } from "@/components/explain/Explain";
+import { Furigana } from "@/components/Furigana";
+import { PitchAccent } from "@/components/PitchAccent";
 import { getKanjiDetail } from "@/lib/kanji";
 import { Loading } from "@/components/Loading";
 import { useDbReady } from "@/lib/useDb";
@@ -101,15 +103,12 @@ export function KanjiDetailClient({ literal }: { literal: string }) {
                 <div className="flex items-center gap-3">
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: dot[i % dot.length] }} />
                   <div>
-                    <div lang="ja" className="font-jp text-lg text-[var(--color-fg)]">
-                      {w.expression.split(k.literal).map((part, j, arr) => (
-                        <span key={j}>
-                          {part}
-                          {j < arr.length - 1 && <span className="text-[var(--color-ember)]">{k.literal}</span>}
-                        </span>
-                      ))}
+                    <div lang="ja" className="font-jp text-lg leading-relaxed text-[var(--color-fg)]">
+                      <Furigana text={w.furigana} fallback={w.expression} />
                     </div>
-                    <div className="font-jp text-xs text-[var(--color-fg-faint)]">{w.reading}</div>
+                    <div lang="ja" className="font-jp text-xs text-[var(--color-ember)]">
+                      <PitchAccent reading={w.reading} accent={w.pitchAccent} pitchReading={w.pitchReading} />
+                    </div>
                   </div>
                 </div>
                 <span className="max-w-[45%] truncate text-right text-sm text-[var(--color-fg-muted)]">{w.meaning}</span>

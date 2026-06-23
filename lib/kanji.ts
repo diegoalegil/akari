@@ -2,7 +2,7 @@ import { getDb } from "./db";
 import { seeded } from "./queries";
 import { safeParseArray } from "./json";
 
-export type KanjiWord = { expression: string; reading: string; meaning: string };
+export type KanjiWord = { expression: string; furigana: string | null; reading: string; pitchAccent: number | null; pitchReading: string | null; meaning: string };
 export type KanjiDetail = {
   literal: string;
   meanings: string[];
@@ -38,13 +38,22 @@ export function getKanjiDetail(literal: string): KanjiDetail | null {
   const words = (
     db
       .prepare(
-        `SELECT w.expression expression, w.reading reading, COALESCE(w.meaning_es, w.meaning_en) meaning
+        `SELECT w.expression expression, w.furigana furigana, w.reading reading,
+                w.pitch_accent pitch_accent, w.pitch_reading pitch_reading,
+                COALESCE(w.meaning_es, w.meaning_en) meaning
          FROM word_kanji wk JOIN words w ON w.id = wk.word_id
          WHERE wk.kanji_id = ?
          ORDER BY (w.frequency IS NULL), w.frequency ASC, w.kaishi_order ASC LIMIT 12`,
       )
       .all(k.id) as Row[]
-  ).map((r) => ({ expression: r.expression as string, reading: r.reading as string, meaning: r.meaning as string }));
+  ).map((r) => ({
+    expression: r.expression as string,
+    furigana: (r.furigana as string) ?? null,
+    reading: r.reading as string,
+    pitchAccent: (r.pitch_accent as number) ?? null,
+    pitchReading: (r.pitch_reading as string) ?? null,
+    meaning: r.meaning as string,
+  }));
 
   // Next kanji in the same order as the browse list / home strip (by frequency).
   const next = db
