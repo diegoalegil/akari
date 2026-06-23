@@ -1,12 +1,14 @@
 "use client";
-import { useReducedMotion } from "framer-motion";
+import { useReducedMotionConfig } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 // Animate KanjiVG strokes in order: each stroke "draws" via stroke-dashoffset,
 // its index number fading in with the brush. Replayable. Honors reduced-motion
-// (renders the full glyph, no animation).
+// (renders the full glyph, no animation) — useReducedMotionConfig also respects
+// the in-app "Movimiento reducido" toggle, not just the OS media query (the
+// draw is Web Animations API, which CSS reduce-motion overrides can't touch).
 export function KanjiStrokes({ strokes, size = 300 }: { strokes: string[]; size?: number }) {
-  const reduce = useReducedMotion();
+  const reduce = useReducedMotionConfig();
   const pathRefs = useRef<(SVGPathElement | null)[]>([]);
   const numRefs = useRef<(SVGTextElement | null)[]>([]);
   const [playing, setPlaying] = useState(false);
