@@ -22,6 +22,14 @@ test("small tsu from a doubled consonant", () => {
   assert.equal(romajiToKana("kitte"), "きって");
 });
 
+test("Hepburn tch geminate → っ + ち (not a stray Latin t)", () => {
+  assert.equal(romajiToKana("matcha"), "まっちゃ");
+  assert.equal(romajiToKana("itchi"), "いっち");
+  // a lone "tsu" / "tachi" must stay unaffected by the new rule
+  assert.equal(romajiToKana("natsu"), "なつ");
+  assert.equal(romajiToKana("tachi"), "たち");
+});
+
 test("ん before a consonant and at the end", () => {
   assert.equal(romajiToKana("nihongo"), "にほんご");
   assert.equal(romajiToKana("shinbun"), "しんぶん");

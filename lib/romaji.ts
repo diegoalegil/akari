@@ -43,6 +43,14 @@ export function romajiToKana(input: string): string {
       i += 1;
       continue;
     }
+    // Hepburn "tch" geminate (matcha, itchi): t+ch → っ, then ch maps normally.
+    // The doubled letters aren't identical (t≠c), so the generic rule below misses
+    // it and would emit a stray Latin "t".
+    if (s[i] === "t" && s.slice(i + 1, i + 3) === "ch") {
+      out += "っ";
+      i += 1;
+      continue;
+    }
     // Double consonant → っ (e.g. "kk", "tt", "ssh", but not "nn").
     if (s[i] === s[i + 1] && !"aiueon".includes(s[i]) && /[a-z]/.test(s[i])) {
       out += "っ";
