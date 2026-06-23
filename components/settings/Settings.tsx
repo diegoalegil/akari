@@ -77,7 +77,8 @@ export function Settings({ initial }: { initial: AppSettings }) {
     document.documentElement.dataset.theme = s.theme;
     document.documentElement.classList.toggle("reduce-motion", s.reducedMotion);
     document.documentElement.classList.toggle("no-furigana", !s.furigana);
-  }, [s.theme, s.reducedMotion, s.furigana]);
+    document.documentElement.classList.toggle("no-pitch", !s.pitch);
+  }, [s.theme, s.reducedMotion, s.furigana, s.pitch]);
 
   const save = (key: string, value: string) => { updateSetting(key, value).catch(() => setSaveError(true)); };
   const setNum = (v: number) => { const n = Math.max(0, Math.min(100, v)); setS((p) => ({ ...p, newPerDay: n })); save("new_per_day", String(n)); };
@@ -111,6 +112,9 @@ export function Settings({ initial }: { initial: AppSettings }) {
           </Row>
           <Row title="Furigana" desc="Lecturas sobre los kanji (reverso y frases)">
             <Toggle on={s.furigana} onChange={(v) => setBool("furigana", "furigana", v)} />
+          </Row>
+          <Row title="Acento tonal" desc="Contorno de pitch sobre la lectura">
+            <Toggle on={s.pitch} onChange={(v) => setBool("pitch", "pitch", v)} />
           </Row>
         </Section>
 

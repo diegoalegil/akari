@@ -21,8 +21,9 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
     document.documentElement.dataset.theme = settings.theme;
     document.documentElement.classList.toggle("reduce-motion", settings.reducedMotion);
     document.documentElement.classList.toggle("no-furigana", !settings.furigana);
+    document.documentElement.classList.toggle("no-pitch", !settings.pitch);
     setSoundEnabled(settings.sound);
-  }, [settings?.theme, settings?.reducedMotion, settings?.sound, settings?.furigana]);
+  }, [settings?.theme, settings?.reducedMotion, settings?.sound, settings?.furigana, settings?.pitch]);
 
   // Persist any debounced write before the tab is hidden or closed. The 600ms
   // persist debounce in clientDb would otherwise drop the last grade if the user
