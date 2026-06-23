@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  output: "export",
+  images: { unoptimized: true },
   // better-sqlite3 is a native addon used only by the seed scripts — keep it
   // external so Next doesn't try to bundle the .node binary.
   serverExternalPackages: ["better-sqlite3"],

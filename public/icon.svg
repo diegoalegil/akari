@@ -1,0 +1,42 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Akari">
+  <defs>
+    <radialGradient id="akariIconGlow" cx="50%" cy="52%" r="50%">
+      <stop offset="0%" stop-color="#F2B66B" stop-opacity="0.9" />
+      <stop offset="55%" stop-color="#FF7E9D" stop-opacity="0.25" />
+      <stop offset="100%" stop-color="#F2B66B" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="akariIconFlame" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#FF7E9D" />
+      <stop offset="100%" stop-color="#F2B66B" />
+    </linearGradient>
+  </defs>
+
+  <!-- full-bleed rounded-square ink background -->
+  <rect x="0" y="0" width="512" height="512" rx="112" fill="#0E0F13" />
+
+  <!-- the mark: lantern scaled from 48-unit space.
+       transform maps viewBox(0..48) → centered ~7.2x mark on 512 canvas:
+       scale 7.2, translate so 24,24.5 (lantern centre) lands at 256,260 -->
+  <g transform="translate(83.2 83.6) scale(7.2)">
+    <!-- warm radial glow behind the lantern -->
+    <circle cx="24" cy="25" r="21" fill="url(#akariIconGlow)" />
+
+    <!-- lantern body + ribs -->
+    <g stroke="#F4EBDD" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none">
+      <path d="M20 7h8" />
+      <path d="M24 7v2" />
+      <path d="M24 9C16 10 14 16.5 14 24c0 7.5 2 13 10 14 8-1 10-6.5 10-14 0-7.5-2-14-10-15Z" fill="#15171D" />
+      <path d="M15 17.5h18" opacity="0.5" />
+      <path d="M14.2 24h19.6" opacity="0.5" />
+      <path d="M15 30.5h18" opacity="0.5" />
+      <path d="M22 38.4h4" />
+      <path d="M24 38.4V42" />
+    </g>
+
+    <!-- breathing flame (static, at rest) -->
+    <path
+      d="M24 18.5c-3.2 3-3.4 6.2-.2 8 .2.1.4.1.6 0 3-1.9 2.8-5 .2-8-.1-.1-.5-.1-.6 0Z"
+      fill="url(#akariIconFlame)"
+    />
+  </g>
+</svg>

@@ -12,6 +12,8 @@
     "seed": "NODE_OPTIONS=--max-old-space-size=4096 tsx scripts/seed.ts",
     "stats": "tsx scripts/stats.ts",
     "export:db": "tsx scripts/export-static-db.ts",
+    "build:static": "tsx scripts/export-static-db.ts && next build",
+    "serve:static": "npx --yes serve out -l 3000",
     "test": "tsx --test tests/**/*.test.ts"
   },
   "dependencies": {

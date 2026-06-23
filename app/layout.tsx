@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AppChrome } from "@/components/AppChrome";
+import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
   description: "App personal de japonés con SRS (FSRS). Contenido 100% de datasets validados.",
 };
 
-export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover" };
+export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", themeColor: "#0E0F13" };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   // The app is fully client-rendered (offline PWA); theme is applied by AppChrome
@@ -25,8 +26,12 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap"
           rel="stylesheet"
         />
+        <link rel="manifest" href="/manifest.webmanifest" />
+        <link rel="apple-touch-icon" href="/icon.svg" />
+        <link rel="icon" href="/icon.svg" type="image/svg+xml" />
       </head>
       <body>
+        <ServiceWorkerRegister />
         <AppChrome>{children}</AppChrome>
       </body>
     </html>
