@@ -3,6 +3,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { KanjiWriteItem } from "@/lib/kanjiDrill";
+import { kanaCounts } from "@/lib/kana";
 import { matchKanji, type MatchResult, type Pt } from "@/lib/strokeMatch";
 import { gradeCard } from "@/app/review/actions";
 import { Lantern } from "@/components/Lantern";
@@ -171,6 +172,9 @@ export function KanjiWrite({ items }: { items: KanjiWriteItem[] }) {
   useEffect(() => () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); }, []);
 
   if (finished) {
+    // Last leg of the daily chain: offer kana if any are still waiting.
+    const kc = kanaCounts();
+    const kanaReady = kc.due + kc.newAvail;
     return (
       <motion.div className="fixed inset-0 z-40 grid place-items-center bg-[var(--color-ink)] px-6" initial={reduce ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25 }}>
         <div className="flex flex-col items-center gap-5 text-center">
@@ -178,7 +182,14 @@ export function KanjiWrite({ items }: { items: KanjiWriteItem[] }) {
           <h1 className="text-2xl font-semibold tracking-tight">¡Escritura completa!</h1>
           <p className="text-[var(--color-fg-muted)]">{done} {done === 1 ? "kanji" : "kanji"} · {correct} {correct === 1 ? "perfecto" : "perfectos"}</p>
           <p className="text-sm text-[var(--color-fg-faint)]">Continuará…</p>
-          <button onClick={() => router.push("/kanji")} className="mt-2 rounded-xl bg-gradient-to-r from-[var(--color-akari)] to-[var(--color-ember)] px-5 py-2.5 font-semibold text-[var(--color-ink-deep)] shadow-[var(--akari-glow)] transition-[filter] hover:brightness-105">Volver</button>
+          {kanaReady > 0 ? (
+            <div className="mt-2 flex flex-col items-center gap-3">
+              <button onClick={() => router.push("/kana")} className="rounded-xl bg-gradient-to-r from-[var(--color-akari)] to-[var(--color-ember)] px-5 py-2.5 font-semibold text-[var(--color-ink-deep)] shadow-[var(--akari-glow)] transition-[filter] hover:brightness-105">Practicar kana ({kanaReady}) →</button>
+              <button onClick={() => router.push("/")} className="text-sm text-[var(--color-fg-muted)] transition-colors hover:text-[var(--color-fg)]">Volver al inicio</button>
+            </div>
+          ) : (
+            <button onClick={() => router.push("/kanji")} className="mt-2 rounded-xl bg-gradient-to-r from-[var(--color-akari)] to-[var(--color-ember)] px-5 py-2.5 font-semibold text-[var(--color-ink-deep)] shadow-[var(--akari-glow)] transition-[filter] hover:brightness-105">Volver</button>
+          )}
         </div>
       </motion.div>
     );

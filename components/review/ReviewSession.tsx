@@ -9,6 +9,7 @@ import { Explain } from "@/components/explain/Explain";
 import { Furigana } from "@/components/Furigana";
 import { PitchAccent } from "@/components/PitchAccent";
 import { kanjiWriteCounts } from "@/lib/kanjiDrill";
+import { kanaCounts } from "@/lib/kana";
 import { getSetting } from "@/lib/queries";
 import { playSound } from "@/lib/sound";
 
@@ -184,10 +185,18 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { c
   }, [finished]);
 
   if (finished) {
-    // Chain into the kanji handwriting drill if any are waiting, so a daily
-    // session flows word review → kanji without a detour through the dashboard.
-    const kw = kanjiWriteCounts(Number(getSetting("new_per_day", "10")));
+    // Chain the daily session: word review → kanji handwriting → kana, offering
+    // whatever's still waiting next so it all flows without a dashboard detour.
+    const newPerDay = Number(getSetting("new_per_day", "10"));
+    const kw = kanjiWriteCounts(newPerDay);
+    const kc = kanaCounts();
     const kanjiReady = kw.due + kw.newAvail;
+    const kanaReady = kc.due + kc.newAvail;
+    const next = kanjiReady > 0
+      ? { href: "/kanji/write", label: `Escribir kanji (${kanjiReady})` }
+      : kanaReady > 0
+        ? { href: "/kana", label: `Practicar kana (${kanaReady})` }
+        : null;
     return (
       <motion.div
         className="fixed inset-0 z-40 grid place-items-center bg-[var(--color-ink)] px-6"
@@ -202,13 +211,13 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { c
             {done} {done === 1 ? "repaso" : "repasos"} · {correctRef.current} {correctRef.current === 1 ? "acierto" : "aciertos"}
           </p>
           <p className="text-sm text-[var(--color-fg-faint)]">Continuará…</p>
-          {kanjiReady > 0 ? (
+          {next ? (
             <div className="mt-2 flex flex-col items-center gap-3">
               <button
-                onClick={() => router.push("/kanji/write")}
+                onClick={() => router.push(next.href)}
                 className="rounded-xl bg-gradient-to-r from-[var(--color-akari)] to-[var(--color-ember)] px-5 py-2.5 font-semibold text-[var(--color-ink-deep)] shadow-[var(--akari-glow)] transition-[filter] hover:brightness-105"
               >
-                Escribir kanji ({kanjiReady}) →
+                {next.label} →
               </button>
               <button onClick={() => router.push("/")} className="text-sm text-[var(--color-fg-muted)] transition-colors hover:text-[var(--color-fg)]">
                 Volver al inicio
