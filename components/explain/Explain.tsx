@@ -32,6 +32,7 @@ export function Explain({ context, label = "Explícame" }: { context: ExplainCon
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
 
   const ask = useCallback(
     async (question?: string) => {
@@ -87,12 +88,25 @@ export function Explain({ context, label = "Explícame" }: { context: ExplainCon
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [history]);
 
-  // Escape closes; move focus into the panel when it opens.
+  // Escape closes; move focus into the panel when it opens; trap Tab inside it
+  // so keyboard focus can't wander to the page behind the modal.
   useEffect(() => {
     if (!open) return;
     inputRef.current?.focus();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") { setOpen(false); return; }
+      if (e.key !== "Tab") return;
+      const panel = panelRef.current;
+      if (!panel) return;
+      const f = panel.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      if (!f.length) return;
+      const first = f[0];
+      const last = f[f.length - 1];
+      const active = document.activeElement;
+      if (e.shiftKey && (active === first || !panel.contains(active))) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && active === last) { e.preventDefault(); first.focus(); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -128,6 +142,7 @@ export function Explain({ context, label = "Explícame" }: { context: ExplainCon
         {open && (
           <motion.div className="fixed inset-0 z-50 flex justify-end bg-black/40" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setOpen(false)}>
             <motion.aside
+              ref={panelRef}
               role="dialog"
               aria-modal="true"
               aria-labelledby="explain-title"
@@ -185,7 +200,7 @@ export function Explain({ context, label = "Explícame" }: { context: ExplainCon
                   onChange={(e) => setInput(e.target.value)}
                   aria-label="Repregunta a Sensei"
                   placeholder="Repregunta a Sensei…"
-                  className="flex-1 rounded-xl border border-[var(--color-line-strong)] bg-[var(--color-surface-2)] px-3 py-2 text-sm text-[var(--color-fg)] placeholder:text-[var(--color-fg-faint)] focus:outline-none"
+                  className="flex-1 rounded-xl border border-[var(--color-line-strong)] bg-[var(--color-surface-2)] px-3 py-2 text-base text-[var(--color-fg)] placeholder:text-[var(--color-fg-faint)] focus:outline-none sm:text-sm"
                 />
                 <button type="submit" aria-label="Enviar" disabled={streaming || !input.trim()} className="grid h-9 w-9 place-items-center rounded-xl bg-[var(--color-indigo)] text-white transition-opacity disabled:opacity-40">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" /></svg>
