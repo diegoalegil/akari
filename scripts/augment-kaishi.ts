@@ -39,6 +39,10 @@ function parsePitch(html: string): { accent: number; reading: string } | null {
   const seg = html.split("・")[0]; // first reading for multi-reading entries
   const reading = onlyKata(seg); // full katakana mora sequence, in order
   if (!reading) return null;
+  // Set phrases (ありがとうございます…) have TWO downstep bars: a single drop
+  // integer can't represent that contour, so skip them (render plain) rather
+  // than show a misleadingly-partial overline.
+  if ((seg.match(/border-right-width/g)?.length ?? 0) > 1) return null;
   // The widget draws the downstep as a `border-right-width` bar on the marker that
   // follows the accented mora — so the katakana BEFORE it is every mora up to and
   // including the drop. No such bar = heiban (0). Robust to the nested nasal spans.
