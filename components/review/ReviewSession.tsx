@@ -8,6 +8,8 @@ import { Lantern } from "@/components/Lantern";
 import { Explain } from "@/components/explain/Explain";
 import { Furigana } from "@/components/Furigana";
 import { PitchAccent } from "@/components/PitchAccent";
+import { kanjiWriteCounts } from "@/lib/kanjiDrill";
+import { getSettings } from "@/lib/queries";
 import { playSound } from "@/lib/sound";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -182,6 +184,10 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { c
   }, [finished]);
 
   if (finished) {
+    // Chain into the kanji handwriting drill if any are waiting, so a daily
+    // session flows word review → kanji without a detour through the dashboard.
+    const kw = kanjiWriteCounts(getSettings().newPerDay);
+    const kanjiReady = kw.due + kw.newAvail;
     return (
       <motion.div
         className="fixed inset-0 z-40 grid place-items-center bg-[var(--color-ink)] px-6"
@@ -196,12 +202,26 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { c
             {done} {done === 1 ? "repaso" : "repasos"} · {correctRef.current} {correctRef.current === 1 ? "acierto" : "aciertos"}
           </p>
           <p className="text-sm text-[var(--color-fg-faint)]">Continuará…</p>
-          <button
-            onClick={() => router.push("/")}
-            className="mt-2 rounded-xl bg-gradient-to-r from-[var(--color-akari)] to-[var(--color-ember)] px-5 py-2.5 font-semibold text-[var(--color-ink-deep)] shadow-[var(--akari-glow)] transition-[filter] hover:brightness-105"
-          >
-            Volver al inicio
-          </button>
+          {kanjiReady > 0 ? (
+            <div className="mt-2 flex flex-col items-center gap-3">
+              <button
+                onClick={() => router.push("/kanji/write")}
+                className="rounded-xl bg-gradient-to-r from-[var(--color-akari)] to-[var(--color-ember)] px-5 py-2.5 font-semibold text-[var(--color-ink-deep)] shadow-[var(--akari-glow)] transition-[filter] hover:brightness-105"
+              >
+                Escribir kanji ({kanjiReady}) →
+              </button>
+              <button onClick={() => router.push("/")} className="text-sm text-[var(--color-fg-muted)] transition-colors hover:text-[var(--color-fg)]">
+                Volver al inicio
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => router.push("/")}
+              className="mt-2 rounded-xl bg-gradient-to-r from-[var(--color-akari)] to-[var(--color-ember)] px-5 py-2.5 font-semibold text-[var(--color-ink-deep)] shadow-[var(--akari-glow)] transition-[filter] hover:brightness-105"
+            >
+              Volver al inicio
+            </button>
+          )}
         </div>
       </motion.div>
     );
