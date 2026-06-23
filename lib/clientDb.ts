@@ -10,6 +10,11 @@ const IDB_NAME = "akari-db";
 const IDB_STORE = "kv";
 const IDB_KEY = "sqlite";
 
+// Bump whenever the shipped seed adds/changes CONTENT (new columns, new cards,
+// corrected data). Also versions the seed-fetch URL so a stale service worker
+// can't hand back the previous deploy's DB during an upgrade.
+const SEED_VERSION = 2;
+
 let instance: ClientDb | null = null;
 let loading: Promise<ClientDb> | null = null;
 
@@ -115,24 +120,106 @@ export class ClientDb {
 }
 
 async function fetchSeedBytes(): Promise<Uint8Array> {
-  const res = await fetch("/akari.db.gz");
+  // The ?v= busts a stale service-worker cache so an upgrade always pulls THIS
+  // deploy's seed (static hosts ignore the query string and serve the file).
+  const res = await fetch(`/akari.db.gz?v=${SEED_VERSION}`);
   if (!res.ok || !res.body) throw new Error("could not fetch seed DB");
   const stream = res.body.pipeThrough(new DecompressionStream("gzip"));
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
-/** Load (once) the client DB: from IndexedDB if present, else the seed asset. */
+// ── content versioning ───────────────────────────────────────────────────────
+// A cached DB below SEED_VERSION is upgraded to the new seed with the user's
+// PROGRESS carried over — so content updates never wipe streaks, SRS state,
+// settings or the API key.
+const PROGRESS_TABLES = ["card_state", "review_log", "settings"] as const;
+
+// Exported for the migration test (pure sql.js helpers).
+export function readVersion(db: SqlJsDatabase): number {
+  try {
+    const r = db.exec("SELECT value FROM settings WHERE key='content_version'");
+    if (r.length && r[0].values.length) return Number(r[0].values[0][0]) || 0;
+  } catch {
+    /* no settings table */
+  }
+  return 0;
+}
+export function stampVersion(db: SqlJsDatabase, v: number): void {
+  db.run("INSERT OR REPLACE INTO settings (key, value) VALUES ('content_version', ?)", [String(v)]);
+}
+/** Copy every row of a table from one DB to another (INSERT OR REPLACE by PK). */
+export function copyTable(from: SqlJsDatabase, to: SqlJsDatabase, table: string): void {
+  let res;
+  try {
+    res = from.exec(`SELECT * FROM ${table}`);
+  } catch {
+    return;
+  }
+  if (!res.length) return;
+  const { columns, values } = res[0];
+  const sql = `INSERT OR REPLACE INTO ${table} (${columns.join(",")}) VALUES (${columns.map(() => "?").join(",")})`;
+  to.run("BEGIN");
+  for (const row of values) to.run(sql, row as never);
+  to.run("COMMIT");
+}
+/** Build the new seed DB and carry the user's progress + settings into it. */
+async function upgradeToSeed(SQL: Awaited<ReturnType<typeof initSqlJs>>, oldDb: SqlJsDatabase): Promise<SqlJsDatabase> {
+  const newDb = new SQL.Database(await fetchSeedBytes());
+  // Don't commit the version bump against a STALE seed (e.g. a service worker
+  // briefly served the previous deploy). If the expected new content isn't
+  // there, bail so we retry on the next load instead of pinning bad content.
+  const fresh = (newDb.exec("PRAGMA table_info(words)")[0]?.values as unknown[][] | undefined)?.some((c) => c[1] === "furigana");
+  if (!fresh) {
+    newDb.close();
+    throw new Error("seed missing expected content — retry later");
+  }
+  for (const t of PROGRESS_TABLES) copyTable(oldDb, newDb, t);
+  stampVersion(newDb, SEED_VERSION);
+  return newDb;
+}
+/** Add any columns a newer build's queries expect, so an un-upgraded (offline)
+ *  cached DB doesn't throw — the new fields just read as NULL until upgrade. */
+function ensureColumns(db: SqlJsDatabase): void {
+  for (const sql of ["ALTER TABLE words ADD COLUMN furigana TEXT", "ALTER TABLE sentences ADD COLUMN furigana TEXT"]) {
+    try {
+      db.run(sql);
+    } catch {
+      /* column already exists */
+    }
+  }
+}
+
+/** Load (once) the client DB: from IndexedDB if present, else the seed asset.
+ *  A stale cached DB is upgraded to the current seed, preserving progress. */
 export async function loadClientDb(): Promise<ClientDb> {
   if (instance) return instance;
   if (loading) return loading;
   loading = (async () => {
     const SQL = await initSqlJs({ locateFile: () => "/sql-wasm.wasm" });
-    let bytes = await idbGet().catch(() => null);
-    if (!bytes) {
-      bytes = await fetchSeedBytes();
-      await idbSet(bytes).catch(() => {}); // cache the seed so we're offline-ready
+    const cached = await idbGet().catch(() => null);
+    let db: SqlJsDatabase;
+    if (!cached) {
+      db = new SQL.Database(await fetchSeedBytes());
+      stampVersion(db, SEED_VERSION);
+      await idbSet(db.export()).catch(() => {}); // cache so we're offline-ready
+    } else {
+      db = new SQL.Database(cached);
+      if (readVersion(db) < SEED_VERSION) {
+        try {
+          const upgraded = await upgradeToSeed(SQL, db);
+          db.close();
+          db = upgraded;
+          await idbSet(db.export()).catch(() => {});
+        } catch {
+          // Offline / seed unavailable: keep the user's DB; ensureColumns below
+          // makes it query-safe and it upgrades for real next online load.
+        }
+      }
     }
-    instance = new ClientDb(new SQL.Database(bytes));
+    // Safety net: guarantee columns newer queries expect exist, so a stale or
+    // un-upgraded DB never throws "no such column" (the field just reads NULL).
+    ensureColumns(db);
+    instance = new ClientDb(db);
     return instance;
   })();
   return loading;
