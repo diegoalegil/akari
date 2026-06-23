@@ -18,12 +18,14 @@ export type Stats = {
   // Kanji handwriting surface (KANJIDIC2 school grade = clean 1–6 jōyō scale).
   kanji: { introduced: number; known: number; total: number };
   kanjiByGrade: { label: string; total: number; known: number }[];
+  // "Leeches" — words you keep forgetting (many FSRS lapses), worth extra focus.
+  leeches: { expression: string; reading: string; meaning: string; lapses: number }[];
 };
 
 const EMPTY: Stats = {
   retention: null, streak: 0, viewsToday: 0, mastery: null, totalReviews: 0,
   heatmap: [], heatmapMax: 0, jlpt: [5, 4, 3, 2, 1].map((l) => ({ level: `N${l}`, total: 0, known: 0 })), forecast: [],
-  kanji: { introduced: 0, known: 0, total: 0 }, kanjiByGrade: [],
+  kanji: { introduced: 0, known: 0, total: 0 }, kanjiByGrade: [], leeches: [],
 };
 
 export function getStats(): Stats {
@@ -111,6 +113,24 @@ export function getStats(): Stats {
     .filter((l) => gradeBuckets.has(l))
     .map((l) => ({ label: l, ...gradeBuckets.get(l)! }));
 
+  // Leeches: words lapsed ≥4 times — the deck's stubborn stragglers.
+  const leeches = (
+    db
+      .prepare(
+        `SELECT w.expression expression, w.reading reading,
+                COALESCE(w.meaning_es, w.meaning_en) meaning, cs.fsrs_lapses lapses
+         FROM card_state cs JOIN words w ON w.id = cs.card_id
+         WHERE cs.card_type='word' AND cs.fsrs_lapses >= 4
+         ORDER BY cs.fsrs_lapses DESC, w.kaishi_order ASC LIMIT 8`,
+      )
+      .all() as Row[]
+  ).map((r) => ({
+    expression: r.expression as string,
+    reading: r.reading as string,
+    meaning: r.meaning as string,
+    lapses: r.lapses as number,
+  }));
+
   return {
     retention: totalReviews ? passed / totalReviews : null,
     streak: computeStreak(db),
@@ -123,5 +143,6 @@ export function getStats(): Stats {
     forecast,
     kanji: { introduced: kanjiIntroduced, known: kanjiKnown, total: kanjiTotal },
     kanjiByGrade,
+    leeches,
   };
 }

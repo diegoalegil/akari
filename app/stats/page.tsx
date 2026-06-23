@@ -119,6 +119,29 @@ export default function StatsPage() {
           </div>
         </section>
       </div>
+
+      {/* Leeches — words that keep slipping, worth extra attention */}
+      {s.leeches.length > 0 && (
+        <section className="surface mt-5 p-5">
+          <div className="text-[10px] uppercase tracking-wider text-[var(--color-fg-faint)]">Se te resisten</div>
+          <h2 className="mt-0.5 font-medium text-[var(--color-fg)]">Palabras que más olvidas</h2>
+          <p className="mt-1 text-sm text-[var(--color-fg-muted)]">Las que más veces se te han escapado. Dales un repaso extra.</p>
+          <ul className="mt-4 flex flex-col divide-y divide-[var(--color-line)]">
+            {s.leeches.map((w) => (
+              <li key={w.expression} className="flex items-center justify-between gap-3 py-2.5">
+                <div className="min-w-0">
+                  <span lang="ja" className="font-jp text-lg text-[var(--color-fg)]">{w.expression}</span>
+                  <span lang="ja" className="font-jp ml-2 text-sm text-[var(--color-ember)]">{w.reading}</span>
+                  <span className="ml-2 text-sm text-[var(--color-fg-muted)]">· {w.meaning}</span>
+                </div>
+                <span className="shrink-0 rounded-full bg-[color-mix(in_oklab,var(--color-again)_18%,transparent)] px-2 py-0.5 text-xs font-medium tabular-nums text-[var(--color-again)]">
+                  {w.lapses} {w.lapses === 1 ? "fallo" : "fallos"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }
