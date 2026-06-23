@@ -120,6 +120,27 @@ export default function StatsPage() {
         </section>
       </div>
 
+      {/* Vocabulary mastery by JLPT level (words.jlpt is ~87% tagged) */}
+      {!s.jlpt.every((j) => j.total === 0) && (
+        <section className="surface mt-5 p-5">
+          <div className="text-[10px] uppercase tracking-wider text-[var(--color-fg-faint)]">Dominio</div>
+          <h2 className="mt-0.5 font-medium text-[var(--color-fg)]">Vocabulario por nivel JLPT</h2>
+          <div className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2">
+            {s.jlpt.map((j) => (
+              <div key={j.level}>
+                <div className="flex justify-between text-sm">
+                  <span className="text-[var(--color-fg-muted)]">{j.level}</span>
+                  <span className="tabular-nums text-[var(--color-fg-faint)]">{j.known} / {j.total}</span>
+                </div>
+                <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-[var(--color-surface-3)]">
+                  <div className="h-full rounded-full bg-gradient-to-r from-[var(--color-good)] to-[var(--color-easy)]" style={{ width: `${j.total ? (j.known / j.total) * 100 : 0}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Leeches — words that keep slipping, worth extra attention */}
       {s.leeches.length > 0 && (
         <section className="surface mt-5 p-5">
