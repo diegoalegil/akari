@@ -1,4 +1,3 @@
-import "server-only";
 import { getDb } from "./db";
 import { seeded } from "./queries";
 import { previewIntervals, type Intervals } from "./fsrs";

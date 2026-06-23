@@ -1,10 +1,11 @@
+"use client";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, useParams } from "next/navigation";
 import { KanjiStrokes } from "@/components/kanji/KanjiStrokes";
 import { Explain } from "@/components/explain/Explain";
 import { getKanjiDetail } from "@/lib/kanji";
-
-export const dynamic = "force-dynamic";
+import { Loading } from "@/components/Loading";
+import { useDbReady } from "@/lib/useDb";
 
 // KANJIDIC2 stores the OLD 4-level JLPT scale; map approximately to the modern
 // N5–N1 for display. (Refined later via a dedicated JLPT dataset.)
@@ -19,9 +20,11 @@ function Chip({ label, value }: { label: string; value: string }) {
   );
 }
 
-export default async function KanjiDetailPage({ params }: { params: Promise<{ literal: string }> }) {
-  const { literal } = await params;
-  const lit = decodeURIComponent(literal);
+export default function KanjiDetailPage() {
+  const params = useParams<{ literal: string }>();
+  const dbReady = useDbReady();
+  if (!dbReady) return <Loading />;
+  const lit = decodeURIComponent(params.literal);
   const k = getKanjiDetail(lit);
   if (!k) notFound();
 

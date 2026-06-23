@@ -1,15 +1,28 @@
+"use client";
+import { Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { KanaDrill, type DrillMode } from "@/components/kana/KanaDrill";
 import { Lantern } from "@/components/Lantern";
 import { getKanaQueue, type KanaType } from "@/lib/kana";
+import { Loading } from "@/components/Loading";
+import { useDbReady } from "@/lib/useDb";
 
-export const metadata = { title: "Drill de kana" };
-export const dynamic = "force-dynamic";
+export default function KanaDrillPage() {
+  // useSearchParams needs a Suspense boundary for static generation.
+  return (
+    <Suspense fallback={<Loading />}>
+      <KanaDrillInner />
+    </Suspense>
+  );
+}
 
-export default async function KanaDrillPage({ searchParams }: { searchParams: Promise<{ script?: string; mode?: string }> }) {
-  const sp = await searchParams;
-  const script: KanaType = sp.script === "katakana" ? "katakana" : "hiragana";
-  const mode: DrillMode = sp.mode === "recall" ? "recall" : "recognition";
+function KanaDrillInner() {
+  const sp = useSearchParams();
+  const dbReady = useDbReady();
+  const script: KanaType = sp.get("script") === "katakana" ? "katakana" : "hiragana";
+  const mode: DrillMode = sp.get("mode") === "recall" ? "recall" : "recognition";
+  if (!dbReady) return <Loading />;
   const items = getKanaQueue(script);
 
   if (items.length === 0) {

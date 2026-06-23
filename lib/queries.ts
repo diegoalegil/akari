@@ -1,4 +1,3 @@
-import "server-only";
 import { getDb } from "./db";
 
 // Read helpers for server components. The SRS queue logic here is intentionally

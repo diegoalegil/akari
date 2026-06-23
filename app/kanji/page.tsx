@@ -1,12 +1,14 @@
+"use client";
 import Link from "next/link";
 import { getKanjiList } from "@/lib/kanji";
 import { kanjiWriteCounts } from "@/lib/kanjiDrill";
 import { getSettings } from "@/lib/queries";
-
-export const metadata = { title: "Kanji" };
-export const dynamic = "force-dynamic";
+import { Loading } from "@/components/Loading";
+import { useDbReady } from "@/lib/useDb";
 
 export default function KanjiPage() {
+  const dbReady = useDbReady();
+  if (!dbReady) return <Loading />;
   const kanji = getKanjiList(160);
   const { newPerDay } = getSettings();
   const w = kanjiWriteCounts(newPerDay);

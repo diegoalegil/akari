@@ -1,11 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { Nav } from "@/components/Nav";
-import { Splash } from "@/components/Splash";
-import { MotionProvider } from "@/components/MotionProvider";
-import { SoundProvider } from "@/components/SoundProvider";
-import { getSettings, getStreak } from "@/lib/queries";
+import { AppChrome } from "@/components/AppChrome";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 
@@ -17,9 +13,10 @@ export const metadata: Metadata = {
 export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover" };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const { theme, reducedMotion, sound } = getSettings();
+  // The app is fully client-rendered (offline PWA); theme is applied by AppChrome
+  // once the DB loads. Default to dark to avoid a flash.
   return (
-    <html lang="es" data-theme={theme} className={`${inter.variable}${reducedMotion ? " reduce-motion" : ""}`}>
+    <html lang="es" data-theme="dark" className={inter.variable}>
       <head>
         {/* Japanese display face when online; macOS Hiragino is the offline fallback. */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -30,12 +27,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         />
       </head>
       <body>
-        <MotionProvider reduced={reducedMotion}>
-          <SoundProvider enabled={sound} />
-          <Splash />
-          <Nav streak={getStreak()} />
-          <main className="min-h-screen pb-24 md:pb-0 md:pl-64">{children}</main>
-        </MotionProvider>
+        <AppChrome>{children}</AppChrome>
       </body>
     </html>
   );

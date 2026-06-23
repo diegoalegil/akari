@@ -1,13 +1,15 @@
+"use client";
 import Link from "next/link";
 import { Lantern } from "@/components/Lantern";
 import { ReviewSession } from "@/components/review/ReviewSession";
 import { getReviewQueue } from "@/lib/review";
 import { getSettings } from "@/lib/queries";
-
-export const metadata = { title: "Repaso" };
-export const dynamic = "force-dynamic";
+import { Loading } from "@/components/Loading";
+import { useDbReady } from "@/lib/useDb";
 
 export default function ReviewPage() {
+  const dbReady = useDbReady();
+  if (!dbReady) return <Loading />;
   const cards = getReviewQueue();
 
   if (cards.length === 0) {

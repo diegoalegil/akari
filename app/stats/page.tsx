@@ -1,7 +1,7 @@
+"use client";
 import { getStats } from "@/lib/stats";
-
-export const metadata = { title: "Progreso" };
-export const dynamic = "force-dynamic";
+import { Loading } from "@/components/Loading";
+import { useDbReady } from "@/lib/useDb";
 
 const pct = (v: number | null) => (v == null ? "—" : `${Math.round(v * 100)}%`);
 
@@ -26,6 +26,8 @@ function heatColor(count: number, max: number): string {
 }
 
 export default function StatsPage() {
+  const dbReady = useDbReady();
+  if (!dbReady) return <Loading />;
   const s = getStats();
   const fcMax = Math.max(1, ...s.forecast.map((f) => f.count));
 

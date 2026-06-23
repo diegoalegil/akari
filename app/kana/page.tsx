@@ -1,13 +1,26 @@
+"use client";
+import { Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { KanaGrid } from "@/components/kana/KanaGrid";
 import { getKanaGrid, kanaMastery, type KanaType } from "@/lib/kana";
+import { Loading } from "@/components/Loading";
+import { useDbReady } from "@/lib/useDb";
 
-export const metadata = { title: "Kana" };
-export const dynamic = "force-dynamic";
+export default function KanaPage() {
+  // useSearchParams needs a Suspense boundary for static generation.
+  return (
+    <Suspense fallback={<Loading />}>
+      <KanaInner />
+    </Suspense>
+  );
+}
 
-export default async function KanaPage({ searchParams }: { searchParams: Promise<{ script?: string }> }) {
-  const sp = await searchParams;
-  const script: KanaType = sp.script === "katakana" ? "katakana" : "hiragana";
+function KanaInner() {
+  const sp = useSearchParams();
+  const script: KanaType = sp.get("script") === "katakana" ? "katakana" : "hiragana";
+  const dbReady = useDbReady();
+  if (!dbReady) return <Loading />;
   const cells = getKanaGrid(script);
   const { known, total } = kanaMastery(script);
 

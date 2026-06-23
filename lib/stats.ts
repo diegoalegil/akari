@@ -1,4 +1,3 @@
-import "server-only";
 import { getDb } from "./db";
 import { computeStreak, seeded } from "./queries";
 

@@ -1,10 +1,12 @@
+"use client";
 import { Settings } from "@/components/settings/Settings";
 import { getSettings } from "@/lib/queries";
-
-export const metadata = { title: "Ajustes" };
-export const dynamic = "force-dynamic";
+import { Loading } from "@/components/Loading";
+import { useDbReady } from "@/lib/useDb";
 
 export default function SettingsPage() {
+  const dbReady = useDbReady();
+  if (!dbReady) return <Loading />;
   const settings = getSettings();
   return (
     <div className="mx-auto max-w-4xl px-5 py-8 md:px-8 md:py-12">

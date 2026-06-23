@@ -1,11 +1,12 @@
+"use client";
 import Link from "next/link";
 import { Lantern } from "@/components/Lantern";
+import { Loading } from "@/components/Loading";
 import { Reveal } from "@/components/Reveal";
 import { StartSession } from "@/components/StartSession";
 import { StatCard } from "@/components/StatCard";
 import { getDashboard } from "@/lib/queries";
-
-export const dynamic = "force-dynamic";
+import { useDbReady } from "@/lib/useDb";
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -18,6 +19,8 @@ function greeting(): string {
 const NF = new Intl.NumberFormat("es-ES");
 
 export default function Home() {
+  const dbReady = useDbReady();
+  if (!dbReady) return <Loading />;
   const d = getDashboard();
   const today = new Intl.DateTimeFormat("es-ES", { weekday: "long", day: "numeric", month: "long" }).format(new Date());
   const ready = d.dueNow + d.newRemaining;

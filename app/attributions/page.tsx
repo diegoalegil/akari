@@ -1,8 +1,8 @@
+"use client";
 import { Lantern } from "@/components/Lantern";
 import { getIngestMeta } from "@/lib/queries";
-
-export const metadata = { title: "Créditos" };
-export const dynamic = "force-dynamic";
+import { Loading } from "@/components/Loading";
+import { useDbReady } from "@/lib/useDb";
 
 type Source = { name: string; use: string; license: string; href: string; versionKey?: string };
 
@@ -16,6 +16,8 @@ const SOURCES: Source[] = [
 ];
 
 export default function AttributionsPage() {
+  const dbReady = useDbReady();
+  if (!dbReady) return <Loading />;
   const meta = getIngestMeta();
   return (
     <div className="mx-auto max-w-3xl px-5 py-10 md:px-8 md:py-14">
