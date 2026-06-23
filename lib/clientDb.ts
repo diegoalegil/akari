@@ -51,7 +51,7 @@ function schedulePersist() {
   if (!instance) return;
   if (persistTimer) clearTimeout(persistTimer);
   persistTimer = setTimeout(() => {
-    if (instance) void idbSet(instance.raw.export());
+    if (instance) void idbSet(instance.raw.export()).catch((e) => console.warn("akari: progress may not be saved — IndexedDB write failed", e));
   }, 600);
 }
 
@@ -147,14 +147,14 @@ export function readVersion(db: SqlJsDatabase): number {
 export function stampVersion(db: SqlJsDatabase, v: number): void {
   db.run("INSERT OR REPLACE INTO settings (key, value) VALUES ('content_version', ?)", [String(v)]);
 }
-/** Copy every row of a table from one DB to another (INSERT OR REPLACE by PK). */
+/** Copy every row of a table from one DB to another (INSERT OR REPLACE by PK).
+ *  Skips only a genuinely-absent table; a read failure on a PRESENT table means
+ *  corruption and is allowed to throw so the caller aborts rather than silently
+ *  dropping the user's progress. */
 export function copyTable(from: SqlJsDatabase, to: SqlJsDatabase, table: string): void {
-  let res;
-  try {
-    res = from.exec(`SELECT * FROM ${table}`);
-  } catch {
-    return;
-  }
+  const exists = from.exec(`SELECT 1 FROM sqlite_master WHERE type='table' AND name='${table}'`).length > 0;
+  if (!exists) return;
+  const res = from.exec(`SELECT * FROM ${table}`);
   if (!res.length) return;
   const { columns, values } = res[0];
   const sql = `INSERT OR REPLACE INTO ${table} (${columns.join(",")}) VALUES (${columns.map(() => "?").join(",")})`;
@@ -204,24 +204,35 @@ export async function loadClientDb(): Promise<ClientDb> {
   loading = (async () => {
     const SQL = await initSqlJs({ locateFile: () => "/sql-wasm.wasm" });
     const cached = await idbGet().catch(() => null);
-    let db: SqlJsDatabase;
-    if (!cached) {
-      db = new SQL.Database(await fetchSeedBytes());
-      stampVersion(db, SEED_VERSION);
-      await idbSet(db.export()).catch(() => {}); // cache so we're offline-ready
-    } else {
-      db = new SQL.Database(cached);
+    // Open the cached DB, but sanity-check it — a corrupt blob must NOT get the
+    // app stuck (it would re-throw forever); fall back to the seed instead.
+    let db: SqlJsDatabase | null = null;
+    if (cached) {
+      try {
+        const d = new SQL.Database(cached);
+        d.exec("SELECT 1 FROM card_state LIMIT 1");
+        db = d;
+      } catch {
+        db = null; // corrupt cache — load the seed below (don't overwrite the cache)
+      }
+    }
+    if (db) {
       if (readVersion(db) < SEED_VERSION) {
         try {
           const upgraded = await upgradeToSeed(SQL, db);
           db.close();
           db = upgraded;
-          await idbSet(db.export()).catch(() => {});
+          await idbSet(db.export()).catch((e) => console.warn("akari: persist after upgrade failed", e));
         } catch {
-          // Offline / seed unavailable: keep the user's DB; ensureColumns below
-          // makes it query-safe and it upgrades for real next online load.
+          // Offline / seed unavailable / corrupt source: keep the user's DB;
+          // ensureColumns below makes it query-safe; it upgrades next online load.
         }
       }
+    } else {
+      db = new SQL.Database(await fetchSeedBytes());
+      stampVersion(db, SEED_VERSION);
+      // Only persist when there was NO cache — never overwrite a corrupt cache.
+      if (!cached) await idbSet(db.export()).catch((e) => console.warn("akari: initial persist failed", e));
     }
     // Safety net: guarantee columns newer queries expect exist, so a stale or
     // un-upgraded DB never throws "no such column" (the field just reads NULL).
