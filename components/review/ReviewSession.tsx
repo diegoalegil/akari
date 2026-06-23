@@ -9,7 +9,7 @@ import { Explain } from "@/components/explain/Explain";
 import { Furigana } from "@/components/Furigana";
 import { PitchAccent } from "@/components/PitchAccent";
 import { kanjiWriteCounts } from "@/lib/kanjiDrill";
-import { getSettings } from "@/lib/queries";
+import { getSetting } from "@/lib/queries";
 import { playSound } from "@/lib/sound";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -186,7 +186,7 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { c
   if (finished) {
     // Chain into the kanji handwriting drill if any are waiting, so a daily
     // session flows word review → kanji without a detour through the dashboard.
-    const kw = kanjiWriteCounts(getSettings().newPerDay);
+    const kw = kanjiWriteCounts(Number(getSetting("new_per_day", "10")));
     const kanjiReady = kw.due + kw.newAvail;
     return (
       <motion.div
@@ -233,7 +233,7 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn" }: { c
   // Card back content (reading + meaning + audio), shared by both flip modes.
   const Back = (
     <>
-      <div lang="ja" aria-label={headLabel} className="font-jp text-4xl font-medium leading-tight text-[var(--color-fg)] sm:text-5xl"><Furigana text={card.furigana} fallback={card.expression} /></div>
+      <div role="img" lang="ja" aria-label={headLabel} className="font-jp text-4xl font-medium leading-tight text-[var(--color-fg)] sm:text-5xl"><Furigana text={card.furigana} fallback={card.expression} /></div>
       <div className="flex items-center gap-3">
         <span lang="ja" aria-hidden className="font-jp text-xl text-[var(--color-ember)]"><PitchAccent reading={card.reading} accent={card.pitchAccent} pitchReading={card.pitchReading} /></span>
         {card.audio && <Speaker src={`/${card.audio}`} label="Pronunciación" />}

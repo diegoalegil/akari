@@ -8,11 +8,12 @@ import { Lantern } from "@/components/Lantern";
 import { playSound, setSoundEnabled } from "@/lib/sound";
 import { flushClientDb, getClientDb } from "@/lib/clientDb";
 
-function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
+function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label?: string }) {
   return (
     <button
       role="switch"
       aria-checked={on}
+      aria-label={label}
       onClick={() => onChange(!on)}
       className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${on ? "bg-gradient-to-r from-[var(--color-akari)] to-[var(--color-ember)]" : "bg-[var(--color-surface-3)]"}`}
     >
@@ -111,10 +112,10 @@ export function Settings({ initial }: { initial: AppSettings }) {
             </div>
           </Row>
           <Row title="Furigana" desc="Lecturas sobre los kanji (reverso y frases)">
-            <Toggle on={s.furigana} onChange={(v) => setBool("furigana", "furigana", v)} />
+            <Toggle label="Furigana" on={s.furigana} onChange={(v) => setBool("furigana", "furigana", v)} />
           </Row>
-          <Row title="Acento tonal" desc="Contorno de pitch sobre la lectura">
-            <Toggle on={s.pitch} onChange={(v) => setBool("pitch", "pitch", v)} />
+          <Row title="Acento tonal" desc="Contorno tonal sobre la lectura">
+            <Toggle label="Acento tonal" on={s.pitch} onChange={(v) => setBool("pitch", "pitch", v)} />
           </Row>
         </Section>
 
@@ -137,10 +138,10 @@ export function Settings({ initial }: { initial: AppSettings }) {
 
         <Section title="Audio y movimiento">
           <Row title="Sonidos" desc="Efectos de sonido (koto, campana, trazo)">
-            <Toggle on={s.sound} onChange={(v) => { setBool("sound", "sound", v); setSoundEnabled(v); if (v) playSound("good"); }} />
+            <Toggle label="Sonidos" on={s.sound} onChange={(v) => { setBool("sound", "sound", v); setSoundEnabled(v); if (v) playSound("good"); }} />
           </Row>
-          <Row title="Reproducir al revelar" desc="Audio nativo tras el giro"><Toggle on={s.autoplay} onChange={(v) => setBool("autoplay", "autoplay", v)} /></Row>
-          <Row title="Movimiento reducido" desc="Conserva el brillo, calma el resto"><Toggle on={s.reducedMotion} onChange={(v) => setBool("reducedMotion", "reduced_motion", v)} /></Row>
+          <Row title="Reproducir al revelar" desc="Audio nativo tras el giro"><Toggle label="Reproducir al revelar" on={s.autoplay} onChange={(v) => setBool("autoplay", "autoplay", v)} /></Row>
+          <Row title="Movimiento reducido" desc="Conserva el brillo, calma el resto"><Toggle label="Movimiento reducido" on={s.reducedMotion} onChange={(v) => setBool("reducedMotion", "reduced_motion", v)} /></Row>
         </Section>
 
         <Section title="Explícame · IA">
