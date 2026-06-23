@@ -4,11 +4,19 @@
 // `npm run seed` reproduces it. HARD RULE intact: furigana is copied verbatim
 // from Kaishi's own validated furigana fields — never synthesized.
 import Database from "better-sqlite3";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { cleanJp } from "./lib/util.ts";
 
 const RAW = path.join(process.cwd(), "data", "raw", "kaishi-collection.sqlite");
 const APP = path.join(process.cwd(), "data", "app.db");
+
+// Never break the build: the furigana columns exist via schema.sql, so a missing
+// Kaishi source just leaves them NULL (plain text) instead of failing the deploy.
+if (!existsSync(RAW) || !existsSync(APP)) {
+  console.warn(`augment-kaishi: skipped (missing ${existsSync(RAW) ? "data/app.db" : "kaishi-collection.sqlite"})`);
+  process.exit(0);
+}
 const FS = String.fromCharCode(0x1f); // Anki field separator
 const HAS_JP = /[぀-ヿ㐀-鿿]/;
 const F = { word: 0, reading: 1, wordFurigana: 3, sentence: 5, sentenceFurigana: 7 } as const;
