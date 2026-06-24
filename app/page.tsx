@@ -219,6 +219,14 @@ export default function Home() {
             glyph="音"
             accent="var(--color-indigo)"
           />
+          <SurfaceTile
+            href="/shadow"
+            title="Escucha y repite"
+            sub="shadowing · pronunciación"
+            due={0}
+            glyph="声"
+            accent="var(--color-good)"
+          />
         </div>
       </Reveal>
     </div>

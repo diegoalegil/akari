@@ -25,6 +25,7 @@ const PRECACHE_URLS = [
   "/kanji",
   "/kanji/write",
   "/pitch/drill",
+  "/shadow",
   "/search",
   "/stats",
   "/settings",
