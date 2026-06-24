@@ -4,7 +4,7 @@ import { Nav } from "./Nav";
 import { Splash } from "./Splash";
 import { MotionProvider } from "./MotionProvider";
 import { getSettings, getStreak } from "@/lib/queries";
-import { useDbReady, useDbError } from "@/lib/useDb";
+import { useDbReady, useDbError, retryDbLoad } from "@/lib/useDb";
 import { setSoundEnabled } from "@/lib/sound";
 import { flushClientDb } from "@/lib/clientDb";
 
@@ -48,6 +48,12 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
         <div className="max-w-sm text-center">
           <p lang="ja" className="font-jp text-4xl text-[var(--color-ember)]">灯</p>
           <p className="mt-4 text-pretty text-sm text-[var(--color-fg-muted)]">{dbError.message}</p>
+          <button
+            onClick={() => retryDbLoad()}
+            className="mt-5 min-h-[44px] rounded-xl border border-[var(--color-line-strong)] px-5 text-sm font-medium text-[var(--color-fg)] transition-colors hover:border-[var(--color-indigo)]"
+          >
+            Reintentar
+          </button>
         </div>
       </div>
     );

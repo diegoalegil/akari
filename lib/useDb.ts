@@ -15,6 +15,17 @@ function startLoad() {
   );
 }
 
+/** Retry after a fatal load error — e.g. a first-ever offline visit that couldn't
+ *  fetch the seed, once connectivity returns. Clears the latched error and re-enters
+ *  the singleton load (which nulled its memo on the prior rejection), so no hard
+ *  reload is needed. */
+export function retryDbLoad(): void {
+  if (settled) return;
+  loadError = null;
+  listeners.forEach((l) => l()); // clear the error UI immediately
+  startLoad();
+}
+
 // Gate for data pages: returns true once the client SQLite DB is open. The load
 // is a singleton (loadClientDb caches), so only the first page after a hard
 // reload actually waits; client navigations are instant.
