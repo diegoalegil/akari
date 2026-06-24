@@ -84,6 +84,13 @@ export function getKanjiDetail(literal: string): KanjiDetail | null {
 export type KanjiListItem = { literal: string; meaning: string; jlpt: number | null; strokeCount: number | null };
 
 /** Browse list: kanji that appear in the vocabulary, most frequent first. */
+const mapKanjiRow = (r: Row): KanjiListItem => ({
+  literal: r.literal as string,
+  meaning: safeParseArray(r.meanings as string)[0] ?? "",
+  jlpt: (r.jlpt as number) ?? null,
+  strokeCount: (r.strokeCount as number) ?? null,
+});
+
 export function getKanjiList(limit = 140): KanjiListItem[] {
   const db = getDb();
   if (!seeded(db)) return [];
@@ -95,10 +102,20 @@ export function getKanjiList(limit = 140): KanjiListItem[] {
          ORDER BY (frequency IS NULL), frequency ASC, stroke_count ASC LIMIT ?`,
       )
       .all(limit) as Row[]
-  ).map((r) => ({
-    literal: r.literal as string,
-    meaning: safeParseArray(r.meanings as string)[0] ?? "",
-    jlpt: (r.jlpt as number) ?? null,
-    strokeCount: (r.strokeCount as number) ?? null,
-  }));
+  ).map(mapKanjiRow);
+}
+
+/** Kanji at a JLPT level (KANJIDIC2's old 4-scale: 4=N5, 3=N4, 2=N3, 1=N2), most
+ *  common first. Capped — the upper levels have 700–1200 kanji. */
+export function getKanjiByJlpt(jlpt: number, limit = 150): KanjiListItem[] {
+  const db = getDb();
+  if (!seeded(db)) return [];
+  return (
+    db
+      .prepare(
+        `SELECT literal, COALESCE(meanings_es, meanings) meanings, jlpt, stroke_count strokeCount
+         FROM kanji WHERE jlpt = ? ORDER BY (frequency IS NULL), frequency ASC, stroke_count ASC LIMIT ?`,
+      )
+      .all(jlpt, limit) as Row[]
+  ).map(mapKanjiRow);
 }

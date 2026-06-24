@@ -1,15 +1,27 @@
 "use client";
 import Link from "next/link";
-import { getKanjiList } from "@/lib/kanji";
+import { useState } from "react";
+import { getKanjiList, getKanjiByJlpt } from "@/lib/kanji";
 import { kanjiWriteCounts } from "@/lib/kanjiDrill";
 import { getSettings } from "@/lib/queries";
 import { Loading } from "@/components/Loading";
 import { useDbReady } from "@/lib/useDb";
 
+// null = the kanji in your vocabulary; otherwise a KANJIDIC2 jlpt level (4=N5…1=N2).
+const FILTERS: { label: string; jlpt: number | null }[] = [
+  { label: "Vocabulario", jlpt: null },
+  { label: "N5", jlpt: 4 },
+  { label: "N4", jlpt: 3 },
+  { label: "N3", jlpt: 2 },
+  { label: "N2", jlpt: 1 },
+];
+
 export default function KanjiPage() {
   const dbReady = useDbReady();
+  const [filter, setFilter] = useState<number | null>(null);
   if (!dbReady) return <Loading />;
-  const kanji = getKanjiList(160);
+  const kanji = filter === null ? getKanjiList(160) : getKanjiByJlpt(filter);
+  const filterLabel = FILTERS.find((f) => f.jlpt === filter)?.label;
   const { newPerDay } = getSettings();
   const w = kanjiWriteCounts(newPerDay);
   const writeReady = w.due + w.newAvail;
@@ -20,7 +32,9 @@ export default function KanjiPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Explorar kanji</h1>
       </div>
       <p className="mt-2 text-sm text-[var(--color-fg-muted)]">
-        Los kanji de tu vocabulario, por frecuencia. Toca uno para ver trazos, lecturas y palabras.
+        {filter === null
+          ? "Los kanji de tu vocabulario, por frecuencia. Toca uno para ver trazos, lecturas y palabras."
+          : `Kanji de nivel ${filterLabel}, los más comunes primero. Toca uno para ver trazos, lecturas y palabras.`}
       </p>
 
       {/* Handwriting drill CTA */}
@@ -44,7 +58,20 @@ export default function KanjiPage() {
         {writeReady > 0 && <span className="ml-auto shrink-0 text-[var(--color-fg-faint)]">→</span>}
       </Link>
 
-      <div className="mt-7 grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-6">
+      <div className="mt-7 flex flex-wrap gap-2">
+        {FILTERS.map((f) => (
+          <button
+            key={f.label}
+            aria-pressed={filter === f.jlpt}
+            onClick={() => setFilter(f.jlpt)}
+            className={`min-h-[40px] rounded-full border px-3.5 py-1.5 text-sm transition-colors ${filter === f.jlpt ? "border-[var(--color-ember)] text-[var(--color-fg)]" : "border-[var(--color-line-strong)] text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]"}`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-5 grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-6">
         {kanji.map((k) => (
           <Link
             key={k.literal}
