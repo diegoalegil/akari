@@ -127,11 +127,8 @@ export type SoundName =
   | "tap" | "reveal" | "flip" | "good" | "hard" | "easy" | "again"
   | "correct" | "wrong" | "stroke" | "complete" | "start";
 
-/** Play a named UI sound (no-op if sound is off or audio is unavailable). */
-export function playSound(name: SoundName) {
-  if (!enabled) return;
-  const c = ac();
-  if (!c) return;
+/** Schedule the voices for a named sound on a live context. */
+function schedule(name: SoundName, c: AudioContext) {
   const t = c.currentTime + 0.001;
   switch (name) {
     case "tap": pluck(N.A5, t, 0.16, 0.08, "sine"); break;
@@ -147,4 +144,21 @@ export function playSound(name: SoundName) {
     case "complete": [N.C5, N.E5, N.G5, N.A5, N.C6].forEach((f, i) => pluck(f, t + i * 0.12, 0.4, 0.5)); bell(N.C6, t + 0.62, 0.28, 1.4); break;
     case "start": pluck(N.G5, t, 0.34, 0.3); pluck(N.C6, t + 0.1, 0.4, 0.4); break;
   }
+}
+
+/** Play a named UI sound (no-op if sound is off or audio is unavailable). */
+export function playSound(name: SoundName) {
+  if (!enabled) return;
+  const c = ac();
+  if (!c) return;
+  // When a sound is triggered without a fresh user gesture (the "complete" jingle
+  // fires from a timer; iOS also auto-suspends the context on background), the
+  // context can be suspended — scheduling a note at currentTime would land it in the
+  // past and drop it. Wait for the clock to actually start in that case. The common
+  // running path stays fully synchronous, so gesture-driven audio is unchanged.
+  if (c.state === "suspended") {
+    void c.resume().then(() => schedule(name, c)).catch(() => {});
+    return;
+  }
+  schedule(name, c);
 }
