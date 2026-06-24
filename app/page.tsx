@@ -54,7 +54,7 @@ export default function Home() {
 
   if (!d.seeded) {
     return (
-      <div className="mx-auto grid min-h-screen max-w-md place-items-center px-6 text-center">
+      <div className="mx-auto grid min-h-[100dvh] max-w-md place-items-center px-6 text-center">
         <div className="flex flex-col items-center gap-4">
           <Lantern size={72} />
           <h1 className="text-xl font-semibold">Akari aún no tiene datos</h1>

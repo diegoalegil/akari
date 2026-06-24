@@ -44,7 +44,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
   // no seed) would otherwise leave every page stuck on its splash — show why.
   if (dbError) {
     return (
-      <div className="grid min-h-screen place-items-center px-6">
+      <div className="grid min-h-[100dvh] place-items-center px-6">
         <div className="max-w-sm text-center">
           <p lang="ja" className="font-jp text-4xl text-[var(--color-ember)]">灯</p>
           <p className="mt-4 text-pretty text-sm text-[var(--color-fg-muted)]">{dbError.message}</p>
@@ -57,7 +57,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
     <MotionProvider reduced={settings?.reducedMotion ?? false}>
       <Splash />
       <Nav streak={streak} />
-      <main className="min-h-screen pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-0 md:pl-64">{children}</main>
+      <main className="min-h-[100dvh] pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-0 md:pl-64">{children}</main>
     </MotionProvider>
   );
 }

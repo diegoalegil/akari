@@ -145,7 +145,7 @@ export function KanaDrill({ items, mode, title }: { items: KanaQueueItem[]; mode
   return (
     <div className="fixed inset-0 z-40 flex flex-col bg-[var(--color-ink)]">
       <header className="flex items-center gap-3 px-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
-        <button onClick={() => router.push("/kana")} aria-label="Salir" className="grid h-9 w-9 place-items-center rounded-lg text-[var(--color-fg-muted)] transition-colors hover:text-[var(--color-fg)]">
+        <button onClick={() => router.push("/kana")} aria-label="Salir" className="grid h-11 w-11 place-items-center rounded-lg text-[var(--color-fg-muted)] transition-colors hover:text-[var(--color-fg)]">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="m6 6 12 12M18 6 6 18" /></svg>
         </button>
         <div className="flex flex-1 flex-col gap-1">
@@ -157,7 +157,9 @@ export function KanaDrill({ items, mode, title }: { items: KanaQueueItem[]; mode
         <span className="text-xs tabular-nums text-[var(--color-fg-faint)]">{done}/{queue.length}</span>
       </header>
 
-      <main className="flex flex-1 items-center justify-center px-4">
+      <main className="flex flex-1 flex-col items-center justify-start overflow-y-auto px-4 py-6 sm:justify-center">
+        {/* scrollable + top-anchored on phones so the auto-focused romaji input
+            isn't trapped under the iOS keyboard (mirrors the kanji-write drill) */}
         <div
           onClick={!revealed && !typedMode ? reveal : undefined}
           onKeyDown={!revealed && !typedMode ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); reveal(); } } : undefined}
