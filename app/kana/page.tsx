@@ -71,6 +71,13 @@ function KanaInner() {
           >
             Practicar escritura
           </Link>
+          <Link
+            href={`/kana/speed?script=${script}`}
+            className="flex items-center gap-1.5 rounded-xl border border-[var(--color-line-strong)] px-4 py-2.5 text-sm font-medium text-[var(--color-fg)] transition-colors hover:border-[var(--color-ember)]"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-ember)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z" /></svg>
+            Sprint 60s
+          </Link>
         </div>
       </section>
 

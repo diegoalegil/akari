@@ -21,6 +21,7 @@ const PRECACHE_URLS = [
   "/review/leeches",
   "/kana",
   "/kana/drill",
+  "/kana/speed",
   "/kanji",
   "/kanji/write",
   "/pitch/drill",
