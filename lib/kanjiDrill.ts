@@ -45,32 +45,37 @@ export function getKanjiWriteQueue(limitNew = 10): KanjiWriteItem[] {
        ORDER BY datetime(cs.due) ASC`,
     )
     .all() as Row[];
+  // Over-fetch fresh kanji: a few carry a kanjivg_svg with no extractable strokes,
+  // and the "drawable" filter runs in JS below. Without the buffer those would be
+  // dropped AFTER the LIMIT, serving fewer new cards than the daily slot promised.
   const fresh = db
     .prepare(
       `SELECT ${COLS} FROM card_state cs JOIN kanji k ON k.id = cs.card_id
        WHERE cs.card_type='kanji' AND cs.introduced_at IS NULL
        ORDER BY (k.frequency IS NULL), k.frequency ASC, k.stroke_count ASC, k.id LIMIT ?`,
     )
-    .all(freshLimit) as Row[];
+    .all(freshLimit > 0 ? freshLimit + 8 : 0) as Row[];
 
   const now = new Date();
-  return [...due.map((r) => ({ r, isNew: false })), ...fresh.map((r) => ({ r, isNew: true }))]
-    .map(({ r, isNew }) => {
-      const kun = safeParseArray(r.kun_r as string);
-      const on = safeParseArray(r.on_r as string);
-      const meanings = safeParseArray(r.meanings as string);
-      const strokes = extractStrokes(r.svg as string);
-      return {
-        id: r.id as number,
-        literal: r.literal as string,
-        meaning: meanings[0] ?? "",
-        reading: cleanReading(kun[0] || on[0] || ""),
-        strokes,
-        isNew,
-        intervals: previewIntervals(r.fc as string, now),
-      };
-    })
-    .filter((it) => it.strokes.length > 0); // only drawable kanji
+  const build = (r: Row, isNew: boolean): KanjiWriteItem => {
+    const kun = safeParseArray(r.kun_r as string);
+    const on = safeParseArray(r.on_r as string);
+    const meanings = safeParseArray(r.meanings as string);
+    return {
+      id: r.id as number,
+      literal: r.literal as string,
+      meaning: meanings[0] ?? "",
+      reading: cleanReading(kun[0] || on[0] || ""),
+      strokes: extractStrokes(r.svg as string),
+      isNew,
+      intervals: previewIntervals(r.fc as string, now),
+    };
+  };
+  const drawable = (it: KanjiWriteItem) => it.strokes.length > 0;
+  // Filter to drawable BEFORE capping the fresh slot, so it isn't starved.
+  const dueItems = due.map((r) => build(r, false)).filter(drawable);
+  const freshItems = fresh.map((r) => build(r, true)).filter(drawable).slice(0, freshLimit);
+  return [...dueItems, ...freshItems];
 }
 
 /** Counts for entry-point badges (due now + new still available today). */
