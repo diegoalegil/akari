@@ -23,6 +23,7 @@ const PRECACHE_URLS = [
   "/kana/drill",
   "/kanji",
   "/kanji/write",
+  "/pitch/drill",
   "/search",
   "/stats",
   "/settings",

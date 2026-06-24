@@ -192,6 +192,14 @@ export default function Home() {
             glyph="あ"
             accent="var(--color-akari)"
           />
+          <SurfaceTile
+            href="/pitch/drill"
+            title="Acento tonal"
+            sub="elige el contorno correcto · práctica"
+            due={0}
+            glyph="音"
+            accent="var(--color-indigo)"
+          />
         </div>
       </Reveal>
     </div>
