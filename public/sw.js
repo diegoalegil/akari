@@ -6,9 +6,26 @@
  * harmless. Precaching the build's JS/CSS/font chunks is what makes the app
  * actually boot offline — index.html alone is useless without its chunks. */
 const CACHE = "akari-__BUILD_ID__";
+// Native-audio clips are content-stable (immutable filenames) and large (~82 MB),
+// so they live in their OWN cache that survives the activate purge — otherwise a
+// code-only deploy (which rotates CACHE) would wipe every clip the user had
+// played and break offline audio until each is re-downloaded.
+const AUDIO_CACHE = "akari-audio";
 
 const PRECACHE_URLS = [
   "/",
+  // Top-level routes, so an offline cold-load / deep-link / refresh of a route the
+  // user never opened online still boots that page (not the home shell). The 837
+  // dynamic /kanji/<literal> pages are intentionally left to network-first caching.
+  "/review",
+  "/kana",
+  "/kana/drill",
+  "/kanji",
+  "/kanji/write",
+  "/search",
+  "/stats",
+  "/settings",
+  "/attributions",
   "/akari.db.gz",
   "/sql-wasm.wasm",
   "/manifest.webmanifest",
@@ -43,7 +60,7 @@ self.addEventListener("activate", (event) => {
       try {
         const keys = await caches.keys();
         await Promise.all(
-          keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))
+          keys.filter((k) => k !== CACHE && k !== AUDIO_CACHE).map((k) => caches.delete(k))
         );
       } catch (_) {
         /* ignore cache cleanup errors */
@@ -98,10 +115,11 @@ self.addEventListener("fetch", (event) => {
   }
 
   // Other GETs: cache-first (the _next chunks are content-hashed → immutable),
-  // then network, caching successful same-origin responses for next time.
+  // then network, caching successful same-origin responses for next time. Audio
+  // goes to the deploy-surviving AUDIO_CACHE; everything else to the build CACHE.
   event.respondWith(
     (async () => {
-      const cache = await caches.open(CACHE);
+      const cache = await caches.open(url.pathname.startsWith("/audio/") ? AUDIO_CACHE : CACHE);
       // The seed DB is fetched with a ?v= cache-buster; match the query-less
       // precached entry so it's available offline on the very first load.
       const cached =
