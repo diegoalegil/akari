@@ -178,13 +178,15 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", revie
         setLastKey(e.key);
         setTimeout(() => setLastKey(null), 150);
         void grade(Number(e.key));
-      } else if (e.key.toLowerCase() === "j") {
+      } else if (e.key.toLowerCase() === "j" && (revealed || reviewMode === "listen")) {
+        // Only replay once the answer is shown — except listen mode, where the
+        // audio IS the prompt. Otherwise J would speak the answer pre-reveal.
         playWord();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [finished, revealed, reveal, grade, playWord]);
+  }, [finished, revealed, reviewMode, reveal, grade, playWord]);
 
   // Celebrate once when the session ends.
   const completedRef = useRef(false);
@@ -245,7 +247,11 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", revie
   }
 
   const progress = queue.length ? (done / queue.length) * 100 : 0;
-  const headLabel = `${card.expression} — ${card.reading} — ${card.meaning}`;
+  // Accessible name for the headword image — Japanese only (it lives under
+  // lang="ja"), reading in parens for kanji words. The Spanish meaning is NOT
+  // folded in here (a screen reader would speak it with Japanese phonemes); it's
+  // announced separately by the un-hidden <p> below, in the page's own locale.
+  const headLabel = card.reading === card.expression ? card.expression : `${card.expression}（${card.reading}）`;
 
   // Kana-only words (expression === reading) would otherwise print the same kana
   // twice on the back — show the pitch contour on the headword and drop the
@@ -263,7 +269,7 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", revie
           {card.audio && <Speaker src={`/${card.audio}`} label="Pronunciación" />}
         </div>
       )}
-      <p aria-hidden className="max-w-md text-pretty text-lg text-[var(--color-fg)]">{card.meaning}</p>
+      <p className="max-w-md text-pretty text-lg text-[var(--color-fg)]">{card.meaning}</p>
     </>
   );
 
