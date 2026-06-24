@@ -282,6 +282,46 @@ test("export() invalidates the statement cache (no stale-statement crash)", { sk
   db.raw.close();
 });
 
+test("applyProgressSnapshot ROLLS BACK a bad snapshot without half-applying (no progress wiped)", { skip: !existsSync(DB) && "run npm run seed first" }, async () => {
+  const SQL = await initSqlJs();
+  const seed = readFileSync(DB);
+  const { db: graded } = playSession(SQL, seed);
+  // In "replace" mode the DELETEs run before the INSERTs, so an INSERT that
+  // throws partway MUST roll back — otherwise the target is left WIPED, the exact
+  // irreplaceable-progress loss this path exists to prevent. Corrupt the snapshot
+  // with a settings row referencing a column the table lacks.
+  const bad = structuredClone({ gen: 1, ...snapshotProgress(graded.raw) }) as ProgressSnapshot;
+  bad.tables.settings.columns = [...bad.tables.settings.columns, "nonexistent_col"];
+  bad.tables.settings.values = bad.tables.settings.values.map((r) => [...r, "x"]);
+
+  const target = new SQL.Database(seed);
+  applyProgressSnapshot(target, snapshotProgress(graded.raw), "replace"); // known-good baseline
+  const before = PROGRESS_TABLES.map((t) => dump(target, t, ORDER[t]));
+  assert.throws(() => applyProgressSnapshot(target, bad, "replace"), /no column|nonexistent_col/i, "a malformed snapshot throws");
+  PROGRESS_TABLES.forEach((t, i) =>
+    assert.deepEqual(dump(target, t, ORDER[t]), before[i], `${t} is byte-identical after the rolled-back failure (not wiped)`),
+  );
+  assert.equal(target.exec("PRAGMA integrity_check")[0].values[0][0], "ok", "DB intact after rollback");
+  graded.raw.close();
+  target.close();
+});
+
+test("replace empties a populated target table when the snapshot's table is empty", { skip: !existsSync(DB) && "run npm run seed first" }, async () => {
+  const SQL = await initSqlJs();
+  const seed = readFileSync(DB);
+  // The DELETE-before-empty-check order means an EMPTY snapshot table must still
+  // clear a POPULATED target (a reset). The seed ships review_log empty, so the
+  // existing deletions test can't prove this — populate the target explicitly.
+  const target = new SQL.Database(seed);
+  target.run("INSERT INTO review_log (card_type,card_id,grade,reviewed_at,elapsed_ms,stability,difficulty,state) VALUES ('word',1,3,'t',100,1.5,2.5,1)");
+  assert.equal(target.exec("SELECT count(*) FROM review_log")[0].values[0][0], 1, "target starts with a review_log row");
+  const emptySnap = snapshotProgress(new SQL.Database(seed)); // review_log empty in the seed
+  assert.equal(emptySnap.tables.review_log.values.length, 0, "snapshot's review_log is empty");
+  applyProgressSnapshot(target, emptySnap, "replace");
+  assert.equal(target.exec("SELECT count(*) FROM review_log")[0].values[0][0], 0, "replace cleared the populated target despite an empty snapshot");
+  target.close();
+});
+
 test("read-statement cache: reset+bind correctness and no stuck cursor across a write", { skip: !existsSync(DB) && "run npm run seed first" }, async () => {
   const SQL = await initSqlJs();
   const db = new ClientDb(new SQL.Database(readFileSync(DB)));
