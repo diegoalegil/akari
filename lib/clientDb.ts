@@ -524,9 +524,16 @@ export async function loadClientDb(): Promise<ClientDb> {
     // with no error. Best-effort + fire-and-forget: a denial changes nothing, a
     // grant prevents silent total loss.
     try { void navigator.storage?.persist?.(); } catch { /* unsupported — ignore */ }
-    const SQL = await initSqlJs({ locateFile: () => "/sql-wasm.wasm" });
-    const full = await idbGetFull().catch(() => null);
-    const overlay = await idbGetOverlay().catch(() => null);
+    // These three are independent and none is consumed until below, so run them
+    // concurrently: the sql-wasm compile overlaps the (disk-bound) IndexedDB reads
+    // of the checkpoint + overlay, shaving cold-start time-to-first-paint on every
+    // returning load. The two IDB reads keep .catch(()=>null) (never reject); only a
+    // wasm failure rejects Promise.all, into the same outer .catch as before.
+    const [SQL, full, overlay] = await Promise.all([
+      initSqlJs({ locateFile: () => "/sql-wasm.wasm" }),
+      idbGetFull().catch(() => null),
+      idbGetOverlay().catch(() => null),
+    ]);
     const baseGen = full?.gen ?? 0;
     // Resume the counter so this session's writes strictly supersede what's on disk.
     persistGen = Math.max(persistGen, baseGen, overlay?.gen ?? 0);
