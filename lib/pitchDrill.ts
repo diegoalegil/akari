@@ -25,7 +25,7 @@ export function getPitchDrillQueue(limit = 16): PitchDrillItem[] {
   // Pull a pool of the most common pitched words, then sample for variety.
   const pool = db
     .prepare(
-      `SELECT expression, pitch_reading reading, pitch_accent accent, meaning_es, meaning_en, audio_path
+      `SELECT expression, reading, pitch_accent accent, meaning_es, meaning_en, audio_path
        FROM words WHERE pitch_accent IS NOT NULL AND pitch_reading IS NOT NULL AND audio_path IS NOT NULL
        ORDER BY kaishi_order ASC LIMIT ?`,
     )
@@ -34,7 +34,11 @@ export function getPitchDrillQueue(limit = 16): PitchDrillItem[] {
   return shuffle(pool)
     .slice(0, limit)
     .map((r) => {
-      const reading = r.reading as string;
+      // Display the word's TRUE reading, not pitch_reading: the scraped NHK katakana
+      // drops the dakuten ring (日本語 → ニホンコ), which would teach an unvoiced kana.
+      // Mora count is identical, so the accent overline still lands right; ・ picks
+      // the first of a multi-variant reading.
+      const reading = (r.reading as string).split("・")[0];
       const accent = r.accent as number;
       const m = splitMorae(reading).length;
       const distractors = shuffle(Array.from({ length: m + 1 }, (_, i) => i).filter((a) => a !== accent)).slice(0, 2);
