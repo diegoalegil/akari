@@ -64,6 +64,21 @@ body {
   background: linear-gradient(180deg, var(--color-surface) 0%, var(--color-ink) 55%, var(--color-ink-deep) 100%);
   background-attachment: fixed;
   color: color-mix(in oklab, var(--color-fg) 72%, transparent);
+  /* iOS: don't rubber-band the body behind full-screen modals / pull-to-refresh */
+  overscroll-behavior: none;
+}
+html {
+  /* iOS: no gray flash box on tap — components provide their own press feedback */
+  -webkit-tap-highlight-color: transparent;
+}
+/* iOS: disable the double-tap-to-zoom delay/zoom on tap controls (the core
+   review loop is tap-tap-tap) while keeping pinch-zoom for accessibility. The
+   kanji canvas keeps its own touch-action:none (it's an SVG, not matched here). */
+button,
+a,
+summary,
+[role="button"] {
+  touch-action: manipulation;
 }
 body {
   font-family: var(--font-sans);
