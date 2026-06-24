@@ -191,13 +191,21 @@ function schedulePersist() {
   }, 600);
 }
 
-/** Force a durable checkpoint now (e.g. on pagehide, or before a backup export).
- *  Flushes any pending write and refreshes the full-DB blob as well. No-op when
- *  this tab has no unsaved change — critically, so an idle background tab can't
- *  overwrite another open tab's freshly-graded progress with its own stale state. */
+/** Flush any pending progress write now (on pagehide / visibilitychange→hidden, or
+ *  before a backup export). No-op when this tab has no unsaved change — so an idle
+ *  background tab can't overwrite another open tab's freshly-graded progress.
+ *
+ *  The overlay is written FIRST and awaited: it's small enough to win the race
+ *  against the page being torn down, and the load path folds it back over the
+ *  checkpoint, so it alone makes the last grade durable. The full 12.7 MB checkpoint
+ *  is then refreshed best-effort — keeping the fallback blob fresh when there's time,
+ *  but never being the thing that races teardown (the old code did the export first,
+ *  which routinely lost that race and took the last grade with it). */
 export async function flushClientDb(): Promise<void> {
   if (persistTimer) { clearTimeout(persistTimer); persistTimer = null; }
-  if (instance && dirty) await persistFull();
+  if (!instance || !dirty) return;
+  await persistOverlay();
+  await persistFull();
 }
 
 // ── better-sqlite3-compatible surface over a sql.js Database ─────────────────
