@@ -349,6 +349,10 @@ export async function buildDb(manifest: Manifest): Promise<Record<string, number
     const set = db.prepare("INSERT OR REPLACE INTO settings (key,value) VALUES (?,?)");
     set.run("new_per_day", "10");
     set.run("theme", "dark");
+    // Stamp the seed's own content version so the runtime upgrade guard can reject a
+    // STALE seed by exact version rather than a hand-rotated marker column. Keep in
+    // sync with SEED_VERSION in lib/clientDb.ts.
+    set.run("content_version", "3");
   });
   insert();
 

@@ -462,11 +462,13 @@ async function upgradeToSeed(
 ): Promise<SqlJsDatabase> {
   const newDb = new SQL.Database(await fetchSeedBytes());
   // Don't commit the version bump against a STALE seed (e.g. a service worker
-  // briefly served the previous deploy). If the expected new content isn't
-  // there, bail so we retry on the next load instead of pinning bad content.
-  // PER-VERSION MARKER: on every SEED_VERSION bump, change this to the newest
-  // column/table added by that version (else a stale prior-version seed passes).
-  const fresh = (newDb.exec("PRAGMA table_info(words)")[0]?.values as unknown[][] | undefined)?.some((c) => c[1] === "pitch_accent");
+  // briefly served the previous deploy). If it isn't the expected version, bail and
+  // retry next load instead of pinning bad content. Prefer the seed's OWN declared
+  // version (build-db now stamps content_version); fall back to a content marker for
+  // an older, pre-stamp seed — that fallback can go once the deployed seed is stamped.
+  const declared = readVersion(newDb);
+  const hasV3Marker = (newDb.exec("PRAGMA table_info(words)")[0]?.values as unknown[][] | undefined)?.some((c) => c[1] === "pitch_accent");
+  const fresh = declared === SEED_VERSION || (declared === 0 && hasV3Marker);
   if (!fresh) {
     newDb.close();
     throw new Error("seed missing expected content — retry later");
