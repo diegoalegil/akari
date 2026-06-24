@@ -119,9 +119,9 @@ export function Settings({ initial }: { initial: AppSettings }) {
           <Row title="Acento tonal" desc="Contorno tonal sobre la lectura">
             <Toggle label="Acento tonal" on={s.pitch} onChange={(v) => setBool("pitch", "pitch", v)} />
           </Row>
-          <Row title="Modo de repaso" desc="Ver la palabra · oírla · decirla desde el significado">
+          <Row title="Modo de repaso" desc="Ver · oír · decir desde el significado · rellenar el hueco en una frase">
             <div className="flex rounded-lg border border-[var(--color-line-strong)] p-0.5 text-sm">
-              {([["normal", "Ver"], ["listen", "Oír"], ["produce", "Decir"]] as [string, string][]).map(([v, l]) => (
+              {([["normal", "Ver"], ["listen", "Oír"], ["produce", "Decir"], ["cloze", "Frase"]] as [string, string][]).map(([v, l]) => (
                 <button key={v} aria-pressed={s.reviewMode === v} onClick={() => setStr("reviewMode", "review_mode", v)} className={`min-h-[44px] rounded-md px-3 py-1.5 transition-colors sm:min-h-0 ${s.reviewMode === v ? "bg-[color-mix(in_oklab,var(--color-indigo)_18%,transparent)] text-[var(--color-fg)]" : "text-[var(--color-fg-muted)]"}`}>{l}</button>
               ))}
             </div>

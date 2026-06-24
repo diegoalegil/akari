@@ -8,6 +8,7 @@ import { Lantern } from "@/components/Lantern";
 import { Explain } from "@/components/explain/Explain";
 import { Furigana } from "@/components/Furigana";
 import { PitchAccent } from "@/components/PitchAccent";
+import { clozeFurigana, type ClozeToken } from "@/lib/cloze";
 import { kanjiWriteCounts } from "@/lib/kanjiDrill";
 import { kanaCounts } from "@/lib/kana";
 import { getSetting } from "@/lib/queries";
@@ -84,6 +85,27 @@ function Speaker({ src, label = "Reproducir audio", big = false }: { src: string
         onError={() => setFailed(true)}
       />
     </button>
+  );
+}
+
+// Render a cloze sentence: the headword run becomes an underlined gap, the rest
+// keeps its furigana ruby.
+function ClozeSentence({ tokens }: { tokens: ClozeToken[] }) {
+  return (
+    <span lang="ja" className="font-jp">
+      {tokens.map((t, i) =>
+        "blank" in t ? (
+          <span key={i} aria-label="palabra oculta" className="mx-1 inline-block min-w-[2.5em] border-b-2 border-dashed border-[var(--color-ember)] align-bottom">&nbsp;</span>
+        ) : "base" in t ? (
+          <ruby key={i}>
+            {t.base}
+            <rt>{t.rt}</rt>
+          </ruby>
+        ) : (
+          <span key={i}>{t.text}</span>
+        ),
+      )}
+    </span>
   );
 }
 
@@ -293,9 +315,22 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", revie
     </>
   );
 
-  // Card front, by review mode: listen = a play button (train the ear), produce
-  // = the meaning to recall the word from (the hardest direction), normal = the
-  // word to recall its reading/meaning.
+  // Cloze mode: blank the headword inside the first example sentence that really
+  // contains it (≈99% of words do); null → the produce front takes over below.
+  const cloze =
+    reviewMode === "cloze"
+      ? (() => {
+          for (const s of card.sentences) {
+            const c = clozeFurigana(s.furigana, s.jp, card.expression);
+            if (c.ok) return { tokens: c.tokens, hint: s.en };
+          }
+          return null;
+        })()
+      : null;
+
+  // Card front, by review mode: listen = a play button (train the ear), cloze =
+  // the word blanked inside a real sentence, produce = the meaning to recall the
+  // word from, normal = the word to recall its reading/meaning.
   const Front = reviewMode === "listen" ? (
     // Listen mode must NOT show the headword (that defeats training the ear), so
     // it never falls through to the normal front — even for the rare audio-less
@@ -313,7 +348,15 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", revie
       )}
       <p className="mt-6 text-sm text-[var(--color-fg-faint)]">Escucha y recuerda · toca para comprobar</p>
     </>
-  ) : reviewMode === "produce" ? (
+  ) : reviewMode === "cloze" && cloze ? (
+    <>
+      <div lang="ja" className="text-pretty text-2xl leading-relaxed text-[var(--color-fg)] sm:text-3xl">
+        <ClozeSentence tokens={cloze.tokens} />
+      </div>
+      {cloze.hint && <p className="mt-4 text-pretty text-base text-[var(--color-fg-muted)]">{cloze.hint}</p>}
+      <p className="mt-6 text-sm text-[var(--color-fg-faint)]">¿Qué palabra falta? · toca para comprobar</p>
+    </>
+  ) : reviewMode === "produce" || reviewMode === "cloze" ? (
     <>
       <div className="text-pretty text-2xl font-medium leading-snug text-[var(--color-fg)] sm:text-3xl">{card.meaning}</div>
       <p className="mt-6 text-sm text-[var(--color-fg-faint)]">¿Cómo se dice en japonés? · toca para comprobar</p>
