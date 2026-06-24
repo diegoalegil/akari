@@ -5,7 +5,8 @@ import { Loading } from "@/components/Loading";
 import { Reveal } from "@/components/Reveal";
 import { StartSession } from "@/components/StartSession";
 import { StatCard } from "@/components/StatCard";
-import { getDashboard } from "@/lib/queries";
+import { WordOfDay } from "@/components/WordOfDay";
+import { getDashboard, getWordOfDay } from "@/lib/queries";
 import { useDbReady } from "@/lib/useDb";
 
 function greeting(): string {
@@ -47,6 +48,7 @@ export default function Home() {
   const dbReady = useDbReady();
   if (!dbReady) return <Loading />;
   const d = getDashboard();
+  const wod = getWordOfDay();
   const today = new Intl.DateTimeFormat("es-ES", { weekday: "long", day: "numeric", month: "long" }).format(new Date());
   const ready = d.dueNow + d.newRemaining;
   const kanjiReady = d.kanji.due + d.kanji.newAvail;
@@ -130,6 +132,14 @@ export default function Home() {
           )}
         </section>
       </Reveal>
+
+      {wod && (
+        <Reveal delay={0.16}>
+          <div className="mt-5">
+            <WordOfDay word={wod} />
+          </div>
+        </Reveal>
+      )}
 
       {/* recent kanji */}
       {d.recentKanji.length > 0 && (

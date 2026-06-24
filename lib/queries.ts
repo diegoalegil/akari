@@ -32,6 +32,57 @@ export function seeded(db: ReturnType<typeof getDb> = getDb()): boolean {
   return row.c > 0;
 }
 
+export type WordOfDay = {
+  expression: string;
+  reading: string;
+  furigana: string | null;
+  pitchAccent: number | null;
+  pitchReading: string | null;
+  meaning: string;
+  audio: string | null;
+  sentence: { jp: string; furigana: string | null; es: string | null; audio: string | null } | null;
+  status: "new" | "learning" | "known";
+};
+
+/** A word to showcase on the dashboard — deterministic by LOCAL date (the same all
+ *  day, identical across reloads, cycling through the deck). Pure read of validated
+ *  data; nothing generated. */
+export function getWordOfDay(): WordOfDay | null {
+  const db = getDb();
+  if (!seeded(db)) return null;
+  const where = "pitch_accent IS NOT NULL AND audio_path IS NOT NULL AND furigana IS NOT NULL";
+  const total = (db.prepare(`SELECT count(*) c FROM words WHERE ${where}`).get() as { c: number }).c;
+  if (!total) return null;
+  const offset = (db.prepare("SELECT CAST(julianday(date('now','localtime')) AS INTEGER) % ? AS o").get(total) as { o: number }).o;
+  const w = db
+    .prepare(
+      `SELECT id, expression, reading, furigana, pitch_accent, pitch_reading, COALESCE(meaning_es, meaning_en) meaning, audio_path
+       FROM words WHERE ${where} ORDER BY kaishi_order ASC LIMIT 1 OFFSET ?`,
+    )
+    .get(offset) as Record<string, unknown> | undefined;
+  if (!w) return null;
+  const s = db
+    .prepare(
+      `SELECT s.jp jp, s.furigana furigana, s.es es, s.en en,
+              (SELECT file_path FROM sentence_audio WHERE sentence_id = s.id LIMIT 1) audio
+       FROM word_sentences ws JOIN sentences s ON s.id = ws.sentence_id WHERE ws.word_id = ? ORDER BY ws.rank ASC LIMIT 1`,
+    )
+    .get(w.id) as Record<string, unknown> | undefined;
+  const cs = db.prepare("SELECT state, introduced_at FROM card_state WHERE card_type='word' AND card_id = ?").get(w.id) as Record<string, unknown> | undefined;
+  const status = !cs || cs.introduced_at == null ? "new" : cs.state === 2 ? "known" : "learning";
+  return {
+    expression: w.expression as string,
+    reading: w.reading as string,
+    furigana: (w.furigana as string) ?? null,
+    pitchAccent: (w.pitch_accent as number) ?? null,
+    pitchReading: (w.pitch_reading as string) ?? null,
+    meaning: w.meaning as string,
+    audio: (w.audio_path as string) ?? null,
+    sentence: s ? { jp: s.jp as string, furigana: (s.furigana as string) ?? null, es: ((s.es as string) ?? (s.en as string)) ?? null, audio: (s.audio as string) ?? null } : null,
+    status: status as "new" | "learning" | "known",
+  };
+}
+
 export function getIngestMeta(): Record<string, string> {
   const db = getDb();
   if (!seeded(db)) return {};
