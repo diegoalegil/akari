@@ -11,7 +11,7 @@ import { PitchAccent } from "@/components/PitchAccent";
 import { clozeFurigana, type ClozeToken } from "@/lib/cloze";
 import { kanjiWriteCounts } from "@/lib/kanjiDrill";
 import { kanaCounts } from "@/lib/kana";
-import { getSetting } from "@/lib/queries";
+import { getSetting, getStreak } from "@/lib/queries";
 import { playSound } from "@/lib/sound";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -239,6 +239,7 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", revie
   if (finished) {
     // Chain the daily session: word review → kanji handwriting → kana, offering
     // whatever's still waiting next so it all flows without a dashboard detour.
+    const streak = getStreak();
     const newPerDay = Number(getSetting("new_per_day", "10"));
     const kw = kanjiWriteCounts(newPerDay);
     const kc = kanaCounts();
@@ -257,12 +258,13 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", revie
         transition={{ duration: 0.25, ease: EASE }}
       >
         <div className="flex flex-col items-center gap-5 text-center">
-          <Lantern size={72} />
+          <Lantern size={72} intensity={Math.min(1, streak / 30)} />
           <h1 className="text-2xl font-semibold tracking-tight">¡Sesión completa!</h1>
           <p className="text-[var(--color-fg-muted)]">
             {done} {done === 1 ? "repaso" : "repasos"} · {correctRef.current} {correctRef.current === 1 ? "acierto" : "aciertos"}
           </p>
-          <p className="text-sm text-[var(--color-fg-faint)]">Continuará…</p>
+          {streak > 0 && <p className="text-sm font-medium text-[var(--color-ember)]">🏮 Racha de {streak} {streak === 1 ? "día" : "días"}</p>}
+          {next && <p className="text-sm text-[var(--color-fg-faint)]">Continuará…</p>}
           {next ? (
             <div className="mt-2 flex flex-col items-center gap-3">
               <button

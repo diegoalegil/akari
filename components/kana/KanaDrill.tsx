@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { KanaQueueItem } from "@/lib/kana";
 import { gradeCard } from "@/app/review/actions";
 import { Lantern } from "@/components/Lantern";
+import { getStreak } from "@/lib/queries";
 import { playSound } from "@/lib/sound";
 
 const GRADE_SND = ["again", "hard", "good", "easy"] as const;
@@ -123,17 +124,19 @@ export function KanaDrill({ items, mode, title }: { items: KanaQueueItem[]; mode
   }, [finished]);
 
   if (finished) {
+    const streak = getStreak();
     return (
-      <div className="fixed inset-0 z-40 grid place-items-center bg-[var(--color-ink)] px-6">
+      <motion.div className="fixed inset-0 z-40 grid place-items-center bg-[var(--color-ink)] px-6" initial={reduce ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25, ease: EASE }}>
         <div className="flex flex-col items-center gap-5 text-center">
-          <Lantern size={64} />
+          <Lantern size={72} intensity={Math.min(1, streak / 30)} />
           <h1 className="text-2xl font-semibold tracking-tight">¡Práctica completa!</h1>
-          <p className="text-[var(--color-fg-muted)]">{done} kana {done === 1 ? "repasado" : "repasados"}. Continuará…</p>
+          <p className="text-[var(--color-fg-muted)]">{done} kana {done === 1 ? "repasado" : "repasados"}</p>
+          {streak > 0 && <p className="text-sm font-medium text-[var(--color-ember)]">🏮 Racha de {streak} {streak === 1 ? "día" : "días"}</p>}
           <button onClick={() => router.push("/kana")} className="mt-2 rounded-xl bg-gradient-to-r from-[var(--color-akari)] to-[var(--color-ember)] px-5 py-2.5 font-semibold text-[var(--color-ink-deep)] shadow-[var(--akari-glow)] transition-[filter] hover:brightness-105">
             Volver
           </button>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
@@ -143,7 +146,7 @@ export function KanaDrill({ items, mode, title }: { items: KanaQueueItem[]; mode
   const promptJp = mode === "recognition";
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col bg-[var(--color-ink)]">
+    <motion.div className="fixed inset-0 z-40 flex flex-col bg-[var(--color-ink)]" initial={reduce ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.22, ease: EASE }}>
       <header className="flex items-center gap-3 px-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
         <button onClick={() => router.push("/kana")} aria-label="Salir" className="grid h-11 w-11 place-items-center rounded-lg text-[var(--color-fg-muted)] transition-colors hover:text-[var(--color-fg)]">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="m6 6 12 12M18 6 6 18" /></svg>
@@ -234,6 +237,6 @@ export function KanaDrill({ items, mode, title }: { items: KanaQueueItem[]; mode
           )}
         </div>
       </footer>
-    </div>
+    </motion.div>
   );
 }
