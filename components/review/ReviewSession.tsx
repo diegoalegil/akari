@@ -35,7 +35,7 @@ function Speaker({ src, label = "Reproducir audio", big = false }: { src: string
       <span
         aria-label="Sin audio disponible"
         title="Sin audio"
-        className={`inline-grid place-items-center rounded-full border border-dashed border-[var(--color-line)] text-[var(--color-fg-faint)] ${big ? "h-11 w-11" : "h-8 w-8"}`}
+        className={`inline-grid place-items-center rounded-full border border-dashed border-[var(--color-line)] text-[var(--color-fg-faint)] h-11 w-11`}
       >
         <svg width={big ? 18 : 14} height={big ? 18 : 14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M11 5 6 9H3v6h3l5 4V5Z" /><path d="m17 9 4 4M21 9l-4 4" />
@@ -56,7 +56,7 @@ function Speaker({ src, label = "Reproducir audio", big = false }: { src: string
           a.play().catch(() => setFailed(true));
         }
       }}
-      className={`inline-grid place-items-center rounded-full border border-[var(--color-line-strong)] text-[var(--color-fg-muted)] transition-colors hover:border-[var(--color-ember)] hover:text-[var(--color-ember)] aria-pressed:border-[var(--color-ember)] aria-pressed:text-[var(--color-ember)] ${big ? "h-11 w-11" : "h-8 w-8"}`}
+      className={`inline-grid place-items-center rounded-full border border-[var(--color-line-strong)] text-[var(--color-fg-muted)] transition-colors hover:border-[var(--color-ember)] hover:text-[var(--color-ember)] aria-pressed:border-[var(--color-ember)] aria-pressed:text-[var(--color-ember)] h-11 w-11`}
     >
       <motion.svg
         width={big ? 20 : 16}
@@ -119,7 +119,10 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", revie
     if (revealed) return;
     setRevealed(true);
     playSound("flip");
-    if (autoplay && card?.audio) setTimeout(playWord, 120);
+    // Play SYNCHRONOUSLY inside the tap — iOS WebKit blocks <audio>.play() that
+    // isn't in the gesture's task, and a setTimeout drops the user-activation, so
+    // a deferred play() is silent on iPhone.
+    if (autoplay && card?.audio) playWord();
   }, [revealed, card, playWord, autoplay]);
 
   const grade = useCallback(
@@ -154,6 +157,23 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", revie
     },
     [revealed, pending, card],
   );
+
+  // iOS unlock: WebKit only lets an <audio> element play programmatically once it
+  // has played inside a user gesture. Prime the persistent word-audio element
+  // (muted) on the very first touch so later auto-plays (listen mode, reveal) are
+  // allowed instead of silently blocked. Runs once.
+  useEffect(() => {
+    const unlock = () => {
+      const a = wordAudioRef.current;
+      if (a) {
+        a.muted = true;
+        a.play().then(() => { a.pause(); a.currentTime = 0; a.muted = false; }).catch(() => { a.muted = false; });
+      }
+      window.removeEventListener("pointerdown", unlock);
+    };
+    window.addEventListener("pointerdown", unlock);
+    return () => window.removeEventListener("pointerdown", unlock);
+  }, []);
 
   // Listening mode: play the word as each new card appears, so you recall from
   // sound before seeing it. (Re-plays on reveal via the normal autoplay path.)
@@ -314,7 +334,7 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", revie
     >
       {/* top bar */}
       <header className="flex items-center gap-3 px-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
-        <button onClick={() => router.push("/")} aria-label="Salir de la sesión" className="grid h-9 w-9 place-items-center rounded-lg text-[var(--color-fg-muted)] transition-colors hover:text-[var(--color-fg)]">
+        <button onClick={() => router.push("/")} aria-label="Salir de la sesión" className="grid h-11 w-11 place-items-center rounded-lg text-[var(--color-fg-muted)] transition-colors hover:text-[var(--color-fg)]">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="m6 6 12 12M18 6 6 18" /></svg>
         </button>
         <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--color-surface-2)]">
