@@ -199,8 +199,11 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", revie
 
   // Listening mode: play the word as each new card appears, so you recall from
   // sound before seeing it. (Re-plays on reveal via the normal autoplay path.)
+  // The FIRST card is skipped: no in-session gesture has primed the <audio> element
+  // yet, so iOS would silently block this non-gesture auto-play. The user's tap on
+  // the play button plays + unlocks it; every later card then auto-plays fine.
   useEffect(() => {
-    if (reviewMode !== "listen" || revealed || !card?.audio) return;
+    if (reviewMode !== "listen" || revealed || !card?.audio || idx === 0) return;
     const t = setTimeout(playWord, 220);
     return () => clearTimeout(t);
   }, [idx, reviewMode, revealed, card, playWord]);
