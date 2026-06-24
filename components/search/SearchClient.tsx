@@ -44,6 +44,24 @@ export function SearchClient() {
         />
       </div>
 
+      {!q.trim() && (
+        <div className="mt-7">
+          <p className="text-sm text-[var(--color-fg-muted)]">Busca en japonés, en romaji o en español. Prueba:</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {["水", "tomodachi", "agua", "日本語", "rojo"].map((ex) => (
+              <button
+                key={ex}
+                onClick={() => { setQ(ex); inputRef.current?.focus(); }}
+                lang={/[ぁ-んァ-ヶ㐀-鿿]/.test(ex) ? "ja" : undefined}
+                className="rounded-full border border-[var(--color-line-strong)] px-3 py-1.5 text-sm text-[var(--color-fg-muted)] transition-colors hover:border-[var(--color-ember)] hover:text-[var(--color-fg)]"
+              >
+                {ex}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {q.trim() && res.kanji.length > 0 && (
         <section className="mt-7">
           <h2 className="mb-3 text-[10px] uppercase tracking-wider text-[var(--color-fg-faint)]">Kanji</h2>
