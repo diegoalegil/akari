@@ -13,11 +13,12 @@
   --color-line: rgba(255, 255, 255, 0.06); /* hairline divider */
   --color-line-strong: #2a2e3a;
 
-  /* Text — warm off-white. faint lifted to #7c8392 so caption-size text clears
-     WCAG AA (~4.6:1 on the card surface) while still reading as de-emphasized. */
+  /* Text — warm off-white. faint lifted to #8a91a0 so caption-size text clears
+     WCAG AA (≥4.5:1) on every surface it sits on — incl. the deeper surface-2/3
+     (nav, kana cells) where #7c8392 fell to 4.37/3.92 — still de-emphasized. */
   --color-fg: #f4f1ec;
   --color-fg-muted: #aab0bd;
-  --color-fg-faint: #7c8392;
+  --color-fg-faint: #8a91a0;
 
   /* Two light languages: warm = brand/ambient/reward, cool = focus/AI */
   --color-akari: #ff7e9d; /* sakura */
