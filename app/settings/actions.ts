@@ -1,5 +1,5 @@
 import { getDb } from "@/lib/db";
-import { emptyCard, serializeCard } from "@/lib/fsrs";
+import { emptyCard, cardColumns } from "@/lib/fsrs";
 
 export async function updateSetting(key: string, value: string) {
   getDb().prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)").run(key, value);
@@ -26,15 +26,18 @@ export async function setApiKey(raw: string) {
 /** Wipe review history and reset every card to a fresh FSRS state. */
 export async function resetProgress() {
   const db = getDb();
-  const now = new Date();
+  // Mirror the SAME denormalized columns the seed and grade paths write — an empty
+  // card has numeric stability/difficulty, not NULL — so a reset card is byte-for-
+  // byte a fresh card, not a subtly different one the queue could treat oddly.
+  const col = cardColumns(emptyCard(new Date()));
   const rows = db.prepare("SELECT card_type, card_id FROM card_state").all() as { card_type: string; card_id: number }[];
   const tx = db.transaction(() => {
     db.prepare("DELETE FROM review_log").run();
     const upd = db.prepare(
-      `UPDATE card_state SET fsrs_card=?, fsrs_stability=NULL, fsrs_difficulty=NULL, fsrs_reps=0,
-        fsrs_lapses=0, due=NULL, state=0, last_review=NULL, introduced_at=NULL WHERE card_type=? AND card_id=?`,
+      `UPDATE card_state SET fsrs_card=?, fsrs_stability=?, fsrs_difficulty=?, fsrs_reps=0,
+        fsrs_lapses=0, due=NULL, state=?, last_review=NULL, introduced_at=NULL WHERE card_type=? AND card_id=?`,
     );
-    for (const r of rows) upd.run(serializeCard(emptyCard(now)), r.card_type, r.card_id);
+    for (const r of rows) upd.run(col.fsrs_card, col.fsrs_stability, col.fsrs_difficulty, col.state, r.card_type, r.card_id);
   });
   tx();
   return { ok: true as const };
