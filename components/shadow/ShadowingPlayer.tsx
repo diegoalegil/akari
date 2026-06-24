@@ -71,10 +71,22 @@ export function ShadowingPlayer({ items }: { items: ShadowingItem[] }) {
     (delta: number) => {
       clearGap();
       setReps(0);
+      if (items.length < 2) {
+        if (playingRef.current) playNow(); // nothing to advance to — just restart
+        return;
+      }
       setIdx((i) => (i + delta + items.length) % items.length);
     },
-    [items.length],
+    [items.length, playNow],
   );
+
+  // A clip that fails to load (offline before it was cached) would stall the loop
+  // forever — onEnded never fires. Skip past it so the session keeps going.
+  const onAudioError = useCallback(() => {
+    if (!playingRef.current) return;
+    clearGap();
+    gapTimer.current = setTimeout(() => { if (playingRef.current) go(1); }, MIN_GAP);
+  }, [go]);
 
   // On word change, if the loop is running, play the new word (audio already
   // unlocked). A tick lets React commit the new <audio src> first.
@@ -84,7 +96,25 @@ export function ShadowingPlayer({ items }: { items: ShadowingItem[] }) {
     return () => clearTimeout(t);
   }, [idx, playNow]);
 
-  useEffect(() => () => clearGap(), []);
+  // Stop the loop when the PWA is backgrounded (iOS suspends timers/audio) so we
+  // don't resume into a stale "playing" state. Only ever pauses — the user taps play
+  // to resume on the already-unlocked element.
+  useEffect(() => {
+    const onHide = () => {
+      if (!document.hidden || !playingRef.current) return;
+      playingRef.current = false;
+      setPlaying(false);
+      clearGap();
+      audioRef.current?.pause();
+      setPhase("idle");
+    };
+    document.addEventListener("visibilitychange", onHide);
+    return () => document.removeEventListener("visibilitychange", onHide);
+  }, []);
+
+  // On unmount, stop the audio too — leaving /shadow via the global ⌘K search, a
+  // back-swipe, or any route change must silence the clip, not just the X button.
+  useEffect(() => () => { playingRef.current = false; clearGap(); audioRef.current?.pause(); }, []);
 
   const exit = () => { clearGap(); audioRef.current?.pause(); router.push("/"); };
 
@@ -123,15 +153,19 @@ export function ShadowingPlayer({ items }: { items: ShadowingItem[] }) {
             transition={reduce || phase === "idle" ? { duration: 0.3 } : { duration: phase === "listen" ? 1.1 : 1.4, repeat: Infinity, ease: "easeInOut" }}
             style={{ boxShadow: `0 0 70px 6px color-mix(in oklab, ${ringColor} 40%, transparent)`, border: `1px solid color-mix(in oklab, ${ringColor} 35%, transparent)` }}
           />
-          <div role="status" aria-live="polite" className="relative px-6 text-center">
+          <div aria-hidden className="relative px-6 text-center">
             <div lang="ja" className="font-jp text-5xl font-medium leading-tight text-[var(--color-fg)]">
               <Furigana text={item.furigana} fallback={item.expression} />
             </div>
-            <div lang="ja" aria-hidden className="mt-2 font-jp text-lg text-[var(--color-ember)]">
+            <div lang="ja" className="mt-2 font-jp text-lg text-[var(--color-ember)]">
               <PitchAccent reading={item.reading} accent={item.pitchAccent} pitchReading={item.pitchReading} />
             </div>
           </div>
         </div>
+
+        {/* The visible word uses ruby, which VoiceOver garbles — announce a clean
+            reading + meaning instead, once per word. */}
+        <p role="status" aria-live="polite" className="sr-only">{item.reading} — {item.meaning}</p>
 
         <div className="flex flex-col items-center gap-1 text-center">
           <p className="text-pretty text-[var(--color-fg-muted)]">{item.meaning}</p>
@@ -148,7 +182,7 @@ export function ShadowingPlayer({ items }: { items: ShadowingItem[] }) {
         </button>
         <button
           onClick={toggle}
-          aria-label={playing ? "Pausar" : "Reproducir"}
+          aria-label="Reproducir o pausar"
           aria-pressed={playing}
           className="grid h-16 w-16 place-items-center rounded-full bg-gradient-to-br from-[var(--color-akari)] to-[var(--color-ember)] text-[var(--color-ink-deep)] shadow-[var(--akari-glow)] transition-[filter] hover:brightness-105"
         >
@@ -163,7 +197,7 @@ export function ShadowingPlayer({ items }: { items: ShadowingItem[] }) {
         </button>
       </footer>
 
-      <audio ref={audioRef} src={`/${item.audio}`} preload="auto" onEnded={onEnded} />
+      <audio ref={audioRef} src={`/${item.audio}`} preload="auto" onEnded={onEnded} onError={onAudioError} />
     </motion.div>
   );
 }
