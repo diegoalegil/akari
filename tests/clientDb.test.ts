@@ -40,7 +40,7 @@ test("client DB shim reads & writes the real database", { skip: !existsSync(DB) 
   assert.equal(v, "ok-123");
 
   // export() must produce a valid, reloadable database (the IndexedDB round-trip)
-  const bytes = db.raw.export();
+  const bytes = db.export();
   assert.ok(bytes.length > 1_000_000, "exported DB looks too small");
   const reopened = new ClientDb(new SQL.Database(bytes));
   const v2 = (reopened.prepare("SELECT value v FROM settings WHERE key='shim_test'").get() as { v: string }).v;

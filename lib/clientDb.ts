@@ -10,7 +10,7 @@
 // (a small "overlay", IDB key `progress`). The full 12.7 MB database (`sqlite`)
 // is re-exported only on seed, content upgrade, or an explicit flush. On load
 // the overlay is folded back over the full checkpoint — see loadClientDb.
-import initSqlJs, { type Database as SqlJsDatabase } from "sql.js";
+import initSqlJs, { type Database as SqlJsDatabase, type Statement as SqlJsStatement } from "sql.js";
 
 const IDB_NAME = "akari-db";
 const IDB_STORE = "kv";
@@ -150,7 +150,7 @@ async function persistFull(): Promise<void> {
   // the same-gen overlay and checkpoint disagree, and load would pick the
   // overlay and drop that grade.
   const snap = snapshotProgress(instance.raw);
-  const bytes = instance.raw.export();
+  const bytes = instance.export();
   await idbSet(IDB_KEY_PROGRESS, { gen, contentVersion: snap.contentVersion, tables: snap.tables });
   await idbSet(IDB_KEY_FULL, { gen, bytes });
 }
@@ -174,42 +174,74 @@ export async function flushClientDb(): Promise<void> {
 
 // ── better-sqlite3-compatible surface over a sql.js Database ─────────────────
 class Statement {
-  constructor(private raw: SqlJsDatabase, private sql: string) {}
+  constructor(private db: ClientDb, private sql: string) {}
   get(...params: unknown[]): Record<string, unknown> | undefined {
-    const s = this.raw.prepare(this.sql);
+    const s = this.db.cachedStmt(this.sql);
     try {
+      s.reset();
       if (params.length) s.bind(params as never);
       return s.step() ? (s.getAsObject() as Record<string, unknown>) : undefined;
     } finally {
-      s.free();
+      s.reset(); // release the read cursor's lock so a later write/COMMIT can't hit "statements in progress"
     }
   }
   all(...params: unknown[]): Record<string, unknown>[] {
-    const s = this.raw.prepare(this.sql);
+    const s = this.db.cachedStmt(this.sql);
     const out: Record<string, unknown>[] = [];
     try {
+      s.reset();
       if (params.length) s.bind(params as never);
       while (s.step()) out.push(s.getAsObject() as Record<string, unknown>);
     } finally {
-      s.free();
+      s.reset();
     }
     return out;
   }
   run(...params: unknown[]): { changes: number } {
-    this.raw.run(this.sql, params as never);
+    // Writes stay on sql.js's own prepare/step/free (not the read-statement
+    // cache) so the progress hot path keeps its exact, proven semantics.
+    this.db.raw.run(this.sql, params as never);
     schedulePersist();
-    return { changes: this.raw.getRowsModified() };
+    return { changes: this.db.raw.getRowsModified() };
   }
 }
 
 export class ClientDb {
+  // Compiled read statements, cached per SQL string. Reused via reset()+bind()
+  // instead of re-preparing on every get()/all(). The cache lives only as long
+  // as the in-memory DB; all DDL (ensureColumns/migrations) runs before the
+  // instance exists, and exec() (the only post-construction DDL path) clears it.
+  private stmts = new Map<string, SqlJsStatement>();
   constructor(public raw: SqlJsDatabase) {}
+  cachedStmt(sql: string): SqlJsStatement {
+    let s = this.stmts.get(sql);
+    if (!s) {
+      s = this.raw.prepare(sql);
+      this.stmts.set(sql, s);
+    }
+    return s;
+  }
+  private clearStmts(): void {
+    for (const s of this.stmts.values()) s.free();
+    this.stmts.clear();
+  }
   prepare(sql: string): Statement {
-    return new Statement(this.raw, sql);
+    return new Statement(this, sql);
   }
   exec(sql: string): void {
+    this.clearStmts(); // exec may run DDL; never let a cached statement outlive a schema change
     this.raw.exec(sql);
     schedulePersist();
+  }
+  /** Serialize the whole DB. sql.js's export() FINALIZES every prepared
+   *  statement and reopens the connection, so our cached statements are stale
+   *  afterwards — drop them (they're already freed) so the next query re-prepares
+   *  against the new handle instead of touching freed memory. Always export
+   *  through here, never raw.export() directly, or the cache will dangle. */
+  export(): Uint8Array {
+    const bytes = this.raw.export();
+    this.stmts.clear();
+    return bytes;
   }
   pragma(_: string): void {
     /* no-op: sql.js has no WAL/foreign-key pragmas we depend on */

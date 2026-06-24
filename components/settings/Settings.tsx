@@ -67,7 +67,7 @@ export function Settings({ initial }: { initial: AppSettings }) {
   };
   const exportProgress = async () => {
     await flushClientDb();
-    const blob = new Blob([getClientDb().raw.export() as unknown as BlobPart], { type: "application/x-sqlite3" });
+    const blob = new Blob([getClientDb().export() as unknown as BlobPart], { type: "application/x-sqlite3" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
