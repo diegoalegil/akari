@@ -30,7 +30,11 @@ export function KanaSpeedGame({ script, rounds }: { script: KanaType; rounds: Ka
   const [timeLeft, setTimeLeft] = useState(ROUND_SECONDS);
   const [flash, setFlash] = useState<"ok" | "bad" | null>(null);
   const [hits, setHits] = useState(0);
+  const [record, setRecord] = useState(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const deadline = useRef(0);
+  const scoreRef = useRef(0);
+  const overRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     try {
@@ -41,35 +45,67 @@ export function KanaSpeedGame({ script, rounds }: { script: KanaType; rounds: Ka
 
   const finish = useCallback(
     (finalScore: number) => {
-      if (timer.current) clearInterval(timer.current);
+      if (timer.current) { clearInterval(timer.current); timer.current = null; }
+      // `best` still holds the PREVIOUS best here (it's only ever bumped below), so a
+      // strict `>` keeps a tie from being a record. Pure: no setters nested inside an
+      // updater.
+      const isRecord = finalScore > 0 && finalScore > best;
+      setRecord(isRecord);
+      if (isRecord) {
+        try { localStorage.setItem(bestKey(script), String(finalScore)); } catch {}
+        setBest(finalScore);
+      }
       setPhase("over");
       playSound("complete");
-      setBest((prev) => {
-        if (finalScore <= prev) return prev;
-        try { localStorage.setItem(bestKey(script), String(finalScore)); } catch {}
-        return finalScore;
-      });
     },
-    [script],
+    [script, best],
   );
 
   const start = useCallback(() => {
-    setIdx(0); setScore(0); setCombo(0); setHits(0); setFlash(null);
+    setIdx(0); setScore(0); setCombo(0); setHits(0); setFlash(null); setRecord(false);
+    scoreRef.current = 0;
     setTimeLeft(ROUND_SECONDS);
+    // Anchor the countdown to the wall clock: iOS freezes JS timers when the PWA is
+    // backgrounded, so counting setInterval ticks would let a paused run bank free
+    // time. Elapsed real seconds always count.
+    deadline.current = Date.now() + ROUND_SECONDS * 1000;
     setPhase("playing");
     playSound("start");
     if (timer.current) clearInterval(timer.current);
     timer.current = setInterval(() => {
-      setTimeLeft((t) => {
-        if (t <= 1) { finish(scoreRef.current); return 0; }
-        return t - 1;
-      });
-    }, 1000);
-  }, [finish]);
+      const left = Math.max(0, Math.ceil((deadline.current - Date.now()) / 1000));
+      setTimeLeft(left); // pure: just sets the number — finish() runs from the effect below
+      if (left <= 0 && timer.current) { clearInterval(timer.current); timer.current = null; }
+    }, 250);
+  }, []);
 
-  // The interval closure needs the latest score without re-arming each tick.
-  const scoreRef = useRef(0);
+  // Keep the latest score readable from the timer / visibility callbacks.
   useEffect(() => { scoreRef.current = score; }, [score]);
+
+  // End the run exactly once when the clock hits zero. Driven by render (not from
+  // inside the setTimeLeft updater) so the updater stays pure and StrictMode can't
+  // double-fire the completion sound / best write.
+  useEffect(() => {
+    if (phase === "playing" && timeLeft === 0) finish(scoreRef.current);
+  }, [phase, timeLeft, finish]);
+
+  // Coming back to the foreground after the deadline ends the run immediately rather
+  // than resuming a frozen clock.
+  useEffect(() => {
+    if (phase !== "playing") return;
+    const onVis = () => {
+      if (document.visibilityState !== "visible") return;
+      setTimeLeft(Math.max(0, Math.ceil((deadline.current - Date.now()) / 1000)));
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, [phase]);
+
+  // Move focus to the results when the game ends, so screen-reader / keyboard users
+  // land on the score instead of <body>.
+  useEffect(() => {
+    if (phase === "over") overRef.current?.focus();
+  }, [phase]);
 
   const pick = useCallback(
     (opt: string) => {
@@ -128,10 +164,9 @@ export function KanaSpeedGame({ script, rounds }: { script: KanaType; rounds: Ka
   }
 
   if (phase === "over") {
-    const record = score > 0 && score >= best;
     return (
       <Shell onExit={exit} reduce={reduce}>
-        <div className="flex w-full max-w-md flex-col items-center gap-5 text-center">
+        <div ref={overRef} tabIndex={-1} role="status" className="flex w-full max-w-md flex-col items-center gap-5 text-center outline-none">
           <Lantern size={72} intensity={Math.min(1, hits / 30)} />
           {record ? (
             <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-ember)]">¡Nuevo récord! 🏮</h1>
@@ -179,6 +214,7 @@ export function KanaSpeedGame({ script, rounds }: { script: KanaType; rounds: Ka
                 initial={reduce ? false : { scale: 0.6, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ opacity: 0 }}
+                transition={{ duration: reduce ? 0 : 0.2, ease: EASE }}
                 className="rounded-full border border-[color-mix(in_oklab,var(--color-ember)_55%,transparent)] bg-[color-mix(in_oklab,var(--color-ember)_14%,transparent)] px-3 py-1 text-sm font-semibold text-[var(--color-ember)]"
                 style={{ boxShadow: `0 0 ${8 + mult * 6}px color-mix(in oklab, var(--color-ember) ${15 + mult * 12}%, transparent)` }}
               >
@@ -206,7 +242,7 @@ export function KanaSpeedGame({ script, rounds }: { script: KanaType; rounds: Ka
               initial={reduce ? false : { y: 14, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={reduce ? { opacity: 0 } : { y: -14, opacity: 0 }}
-              transition={{ duration: 0.16, ease: EASE }}
+              transition={{ duration: reduce ? 0 : 0.16, ease: EASE }}
               className="font-jp text-[7rem] leading-none text-[var(--color-fg)]"
             >
               {round?.char}
