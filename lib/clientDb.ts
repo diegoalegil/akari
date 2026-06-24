@@ -37,6 +37,14 @@ function nextGen(): number {
   return ++persistGen;
 }
 
+// Whether THIS tab has progress changes not yet written to IndexedDB. Guards a
+// multi-tab hazard: with two tabs/PWA windows open over the one shared DB, an
+// idle tab's visibilitychange→flush would otherwise rewrite the shared overlay
+// (and 12.7 MB blob) from its OWN stale in-memory state, silently burying the
+// other tab's whole study session. An idle tab never makes a change, so it never
+// becomes dirty, so it never writes — the clobber can't happen.
+let dirty = false;
+
 // ── progress snapshot/apply (pure sql.js; exported for the round-trip tests) ──
 type TableSnapshot = { columns: string[]; values: unknown[][] };
 export type ProgressSnapshot = { contentVersion: number; tables: Record<string, TableSnapshot> };
@@ -58,7 +66,7 @@ export function overlayReplaces(baseGen: number, overlay: ProgressOverlay | null
 export function snapshotProgress(db: SqlJsDatabase): ProgressSnapshot {
   const tables: Record<string, TableSnapshot> = {};
   for (const t of PROGRESS_TABLES) {
-    const res = db.exec(`SELECT * FROM ${t}`);
+    const res = db.exec(`SELECT * FROM "${t}"`);
     tables[t] = res.length ? { columns: res[0].columns, values: res[0].values as unknown[][] } : { columns: [], values: [] };
   }
   return { contentVersion: readVersion(db), tables };
@@ -78,10 +86,14 @@ export function applyProgressSnapshot(db: SqlJsDatabase, snap: ProgressSnapshot,
     for (const t of PROGRESS_TABLES) {
       const snapT = snap.tables[t];
       if (!snapT) continue;
-      if (mode === "replace") db.run(`DELETE FROM ${t}`);
+      // DELETE must precede the empty-values short-circuit below: an empty
+      // snapshot table must still empty a populated target (that's how "replace"
+      // honours deletions / a reset). Do not hoist the empty check above this.
+      if (mode === "replace") db.run(`DELETE FROM "${t}"`);
       if (!snapT.values.length) continue;
       const cols = snapT.columns;
-      const sql = `INSERT OR REPLACE INTO ${t} (${cols.join(",")}) VALUES (${cols.map(() => "?").join(",")})`;
+      const colList = cols.map((c) => `"${c}"`).join(",");
+      const sql = `INSERT OR REPLACE INTO "${t}" (${colList}) VALUES (${cols.map(() => "?").join(",")})`;
       for (const row of snapT.values) db.run(sql, row as never);
     }
     db.run("COMMIT");
@@ -135,30 +147,44 @@ async function idbGetOverlay(): Promise<ProgressOverlay | null> {
 // ── persistence ──────────────────────────────────────────────────────────────
 /** Write just the progress overlay (the hot path: runs after every grade). */
 async function persistOverlay(): Promise<void> {
-  if (!instance) return;
-  const snap = snapshotProgress(instance.raw);
-  await idbSet(IDB_KEY_PROGRESS, { gen: nextGen(), contentVersion: snap.contentVersion, tables: snap.tables });
+  if (!instance || !dirty) return;
+  dirty = false; // cleared at snapshot time; a write during the await re-sets it
+  try {
+    const snap = snapshotProgress(instance.raw);
+    await idbSet(IDB_KEY_PROGRESS, { gen: nextGen(), contentVersion: snap.contentVersion, tables: snap.tables });
+  } catch (e) {
+    dirty = true; // write failed — keep us dirty so the next flush/grade retries
+    throw e;
+  }
 }
 /** Write a full checkpoint: refresh the overlay AND the whole-DB blob. Overlay
  *  first so that on a fire-and-forget pagehide the small write — which carries
  *  the last grade — is the one most likely to finish before the page dies. */
 async function persistFull(): Promise<void> {
   if (!instance) return;
-  const gen = nextGen();
+  dirty = false;
   // Capture BOTH the overlay snapshot and the full bytes synchronously, before
   // any await — otherwise a grade slipping in between the two writes would make
   // the same-gen overlay and checkpoint disagree, and load would pick the
   // overlay and drop that grade.
+  const gen = nextGen();
   const snap = snapshotProgress(instance.raw);
-  const bytes = instance.export();
-  await idbSet(IDB_KEY_PROGRESS, { gen, contentVersion: snap.contentVersion, tables: snap.tables });
-  await idbSet(IDB_KEY_FULL, { gen, bytes });
+  let bytes: Uint8Array;
+  try {
+    bytes = instance.export();
+    await idbSet(IDB_KEY_PROGRESS, { gen, contentVersion: snap.contentVersion, tables: snap.tables });
+    await idbSet(IDB_KEY_FULL, { gen, bytes });
+  } catch (e) {
+    dirty = true;
+    throw e;
+  }
 }
 
 // Debounced: a burst of writes within a session coalesces into one overlay write.
 let persistTimer: ReturnType<typeof setTimeout> | null = null;
 function schedulePersist() {
   if (!instance) return;
+  dirty = true;
   if (persistTimer) clearTimeout(persistTimer);
   persistTimer = setTimeout(() => {
     void persistOverlay().catch((e) => console.warn("akari: progress may not be saved — IndexedDB write failed", e));
@@ -166,10 +192,12 @@ function schedulePersist() {
 }
 
 /** Force a durable checkpoint now (e.g. on pagehide, or before a backup export).
- *  Flushes any pending write and refreshes the full-DB blob as well. */
+ *  Flushes any pending write and refreshes the full-DB blob as well. No-op when
+ *  this tab has no unsaved change — critically, so an idle background tab can't
+ *  overwrite another open tab's freshly-graded progress with its own stale state. */
 export async function flushClientDb(): Promise<void> {
   if (persistTimer) { clearTimeout(persistTimer); persistTimer = null; }
-  if (instance) await persistFull();
+  if (instance && dirty) await persistFull();
 }
 
 // ── better-sqlite3-compatible surface over a sql.js Database ─────────────────
@@ -262,7 +290,13 @@ export class ClientDb {
   }
 }
 
+// Thrown when the browser can't gunzip the seed (DecompressionStream landed in
+// Safari/iOS 16.4; every other Akari prerequisite runs on iOS 15–16.3). The UI
+// shows this message instead of an endless splash. See lib/useDb.ts.
+export const UNSUPPORTED_BROWSER = "Akari necesita un navegador más reciente (iOS 16.4 o posterior). Actualiza para empezar.";
+
 async function fetchSeedBytes(): Promise<Uint8Array> {
+  if (typeof DecompressionStream === "undefined") throw new Error(UNSUPPORTED_BROWSER);
   // The ?v= busts a stale service-worker cache so an upgrade always pulls THIS
   // deploy's seed (static hosts ignore the query string and serve the file).
   const res = await fetch(`/akari.db.gz?v=${SEED_VERSION}`);
@@ -296,10 +330,11 @@ export function stampVersion(db: SqlJsDatabase, v: number): void {
 export function copyTable(from: SqlJsDatabase, to: SqlJsDatabase, table: string): void {
   const exists = from.exec(`SELECT 1 FROM sqlite_master WHERE type='table' AND name='${table}'`).length > 0;
   if (!exists) return;
-  const res = from.exec(`SELECT * FROM ${table}`);
+  const res = from.exec(`SELECT * FROM "${table}"`);
   if (!res.length) return;
   const { columns, values } = res[0];
-  const sql = `INSERT OR REPLACE INTO ${table} (${columns.join(",")}) VALUES (${columns.map(() => "?").join(",")})`;
+  const colList = columns.map((c) => `"${c}"`).join(",");
+  const sql = `INSERT OR REPLACE INTO "${table}" (${colList}) VALUES (${columns.map(() => "?").join(",")})`;
   to.run("BEGIN");
   for (const row of values) to.run(sql, row as never);
   to.run("COMMIT");
@@ -362,6 +397,12 @@ export async function loadClientDb(): Promise<ClientDb> {
   if (instance) return instance;
   if (loading) return loading;
   loading = (async () => {
+    // Ask the browser to make our storage persistent so IndexedDB isn't silently
+    // evicted (WebKit's ~7-day script-storage cap, or eviction under storage
+    // pressure) — that would wipe the user's ONLY copy of their FSRS progress
+    // with no error. Best-effort + fire-and-forget: a denial changes nothing, a
+    // grant prevents silent total loss.
+    try { void navigator.storage?.persist?.(); } catch { /* unsupported — ignore */ }
     const SQL = await initSqlJs({ locateFile: () => "/sql-wasm.wasm" });
     const full = await idbGetFull().catch(() => null);
     const overlay = await idbGetOverlay().catch(() => null);

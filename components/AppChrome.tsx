@@ -4,7 +4,7 @@ import { Nav } from "./Nav";
 import { Splash } from "./Splash";
 import { MotionProvider } from "./MotionProvider";
 import { getSettings, getStreak } from "@/lib/queries";
-import { useDbReady } from "@/lib/useDb";
+import { useDbReady, useDbError } from "@/lib/useDb";
 import { setSoundEnabled } from "@/lib/sound";
 import { flushClientDb } from "@/lib/clientDb";
 
@@ -13,6 +13,7 @@ import { flushClientDb } from "@/lib/clientDb";
 // (nav, splash) renders immediately so the app never looks empty while loading.
 export function AppChrome({ children }: { children: React.ReactNode }) {
   const ready = useDbReady();
+  const dbError = useDbError();
   const settings = ready ? getSettings() : null;
   const streak = ready ? getStreak() : 0;
 
@@ -38,6 +39,19 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
       window.removeEventListener("pagehide", flush);
     };
   }, []);
+
+  // A fatal load error (unsupported browser, or a first-ever offline visit with
+  // no seed) would otherwise leave every page stuck on its splash — show why.
+  if (dbError) {
+    return (
+      <div className="grid min-h-screen place-items-center px-6">
+        <div className="max-w-sm text-center">
+          <p lang="ja" className="font-jp text-4xl text-[var(--color-ember)]">灯</p>
+          <p className="mt-4 text-pretty text-sm text-[var(--color-fg-muted)]">{dbError.message}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <MotionProvider reduced={settings?.reducedMotion ?? false}>
