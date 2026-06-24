@@ -108,7 +108,15 @@ export function KanjiWrite({ items }: { items: KanjiWriteItem[] }) {
   const clear = () => !checked && setStrokes([]);
 
   const check = useCallback(() => {
-    if (checked || !item || strokes.length === 0) return;
+    if (checked || !item) return;
+    // No strokes → reveal the answer and let the learner self-grade. This is the
+    // keyboard/AT escape hatch (drawing is pointer-only) AND a give-up affordance
+    // for everyone; ok=false so a self-graded pass doesn't inflate the hit count.
+    if (strokes.length === 0) {
+      setChecked({ ok: false, countMatch: false, perStroke: [], score: 0, expected: item.strokes.length });
+      setGuide(true);
+      return;
+    }
     const ref = item.strokes.map((_, i) => sampleEl(refPaths.current[i]));
     const res = matchKanji(strokes, ref);
     setChecked(res);
@@ -283,8 +291,8 @@ export function KanjiWrite({ items }: { items: KanjiWriteItem[] }) {
         <div className="mx-auto w-full max-w-md">
           {saveError && <p role="alert" className="mb-2 text-center text-sm text-[var(--color-again)]">No se pudo guardar. Inténtalo de nuevo.</p>}
           {!checked ? (
-            <button onClick={check} disabled={!strokes.length} className="w-full rounded-xl border border-[var(--color-line-strong)] bg-[var(--color-surface-2)] py-3.5 font-medium text-[var(--color-fg)] transition-colors hover:border-[var(--color-indigo)] disabled:opacity-40">
-              Comprobar
+            <button onClick={check} className="w-full rounded-xl border border-[var(--color-line-strong)] bg-[var(--color-surface-2)] py-3.5 font-medium text-[var(--color-fg)] transition-colors hover:border-[var(--color-indigo)]">
+              {strokes.length ? "Comprobar" : "Ver respuesta"}
             </button>
           ) : (
             <>
