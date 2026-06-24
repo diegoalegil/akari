@@ -13,6 +13,7 @@ export type DashboardData = {
   dueNow: number;
   newRemaining: number;
   reviewsToday: number;
+  everReviewed: boolean; // false on a brand-new account → show the intro
   streak: number;
   kanjiInVocab: number;
   recentKanji: { literal: string; reading: string }[];
@@ -163,7 +164,7 @@ export function getStreak(): number {
 export function getDashboard(): DashboardData {
   const db = getDb();
   if (!seeded(db)) {
-    return { seeded: false, newPerDay: 10, totals: { words: 0, kanji: 0, kana: 0 }, dueNow: 0, newRemaining: 0, reviewsToday: 0, streak: 0, kanjiInVocab: 0, recentKanji: [], kanji: { due: 0, newAvail: 0 }, kana: { due: 0, newAvail: 0, script: "hiragana" } };
+    return { seeded: false, newPerDay: 10, totals: { words: 0, kanji: 0, kana: 0 }, dueNow: 0, newRemaining: 0, reviewsToday: 0, everReviewed: false, streak: 0, kanjiInVocab: 0, recentKanji: [], kanji: { due: 0, newAvail: 0 }, kana: { due: 0, newAvail: 0, script: "hiragana" } };
   }
   const newPerDay = Number(getSetting("new_per_day", "10"));
   const recentKanji = (
@@ -249,6 +250,7 @@ export function getDashboard(): DashboardData {
     ),
     newRemaining: Math.max(0, Math.min(newPerDay - introducedToday, notIntroduced)),
     reviewsToday: count(db, "SELECT count(*) c FROM review_log WHERE date(reviewed_at,'localtime') = date('now','localtime')"),
+    everReviewed: count(db, "SELECT count(*) c FROM review_log") > 0,
     streak: computeStreak(db),
     kanjiInVocab: count(db, "SELECT count(DISTINCT kanji_id) c FROM word_kanji"),
     recentKanji,

@@ -33,6 +33,25 @@ export default function StatsPage() {
   const s = getStats();
   const fcMax = Math.max(1, ...s.forecast.map((f) => f.count));
 
+  // Day 0: a warm "come back after your first session" instead of grids of zeros.
+  if (s.totalReviews === 0) {
+    return (
+      <div className="mx-auto max-w-4xl px-5 py-8 md:px-8 md:py-12">
+        <h1 className="text-2xl font-semibold tracking-tight">Progreso</h1>
+        <p className="mt-1 text-sm text-[var(--color-fg-muted)]">La luz que vas a encender.</p>
+        <div className="surface mt-8 flex flex-col items-center gap-4 px-6 py-12 text-center">
+          <span lang="ja" className="font-jp text-4xl text-[var(--color-ember)]">灯</span>
+          <p className="max-w-sm text-pretty text-[var(--color-fg-muted)]">
+            Tu retención, racha, mapa de actividad y pronóstico aparecerán aquí en cuanto termines tu primera sesión de repaso.
+          </p>
+          <Link href="/review" className="mt-2 rounded-xl bg-gradient-to-r from-[var(--color-akari)] to-[var(--color-ember)] px-5 py-2.5 font-semibold text-[var(--color-ink-deep)] shadow-[var(--akari-glow)] transition-[filter] hover:brightness-105">
+            Empezar a estudiar →
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-4xl px-5 py-8 md:px-8 md:py-12">
       <h1 className="text-2xl font-semibold tracking-tight">Progreso</h1>

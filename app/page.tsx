@@ -4,6 +4,7 @@ import { Lantern } from "@/components/Lantern";
 import { Loading } from "@/components/Loading";
 import { Reveal } from "@/components/Reveal";
 import { StartSession } from "@/components/StartSession";
+import { OnboardingCard } from "@/components/OnboardingCard";
 import { StatCard } from "@/components/StatCard";
 import { WordOfDay } from "@/components/WordOfDay";
 import { getDashboard, getWordOfDay } from "@/lib/queries";
@@ -76,6 +77,14 @@ export default function Home() {
           {greeting()} · <span className="first-letter:uppercase">{today}</span>
         </p>
       </Reveal>
+
+      {!d.everReviewed && (
+        <Reveal delay={0.02}>
+          <div className="mt-4">
+            <OnboardingCard />
+          </div>
+        </Reveal>
+      )}
 
       {/* Hero — today's session */}
       <Reveal delay={0.04}>
