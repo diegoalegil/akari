@@ -347,6 +347,63 @@ export function copyTable(from: SqlJsDatabase, to: SqlJsDatabase, table: string)
   for (const row of values) to.run(sql, row as never);
   to.run("COMMIT");
 }
+// ── content-version id remap ──────────────────────────────────────────────────
+// card_state/review_log key progress to a content row by integer id. Those ids are
+// NOT stable across content versions — word ids track kaishi_order and kana ids the
+// fixed gojūon index (both stable), but kanji ids are assigned in discovery order,
+// so adding/removing a word can shift them. Carrying progress across an upgrade by
+// raw id would silently re-attach a card to the WRONG entry. So translate each
+// card_id through its NATURAL key (what the row actually is) old→new instead.
+export type CardIdRemap = { word: Map<number, number>; kanji: Map<number, number>; kana: Map<number, number> };
+const REMAP_SPECS = [
+  { type: "word", table: "words", key: ["expression", "reading"] },
+  { type: "kanji", table: "kanji", key: ["literal"] },
+  { type: "kana", table: "kana", key: ["char"] },
+] as const;
+
+function naturalKeyRows(db: SqlJsDatabase, table: string, keyCols: readonly string[]): [number, string][] {
+  const res = db.exec(`SELECT id, ${keyCols.map((c) => `"${c}"`).join(",")} FROM "${table}"`);
+  if (!res.length) return [];
+  return (res[0].values as unknown[][]).map((row) => [row[0] as number, row.slice(1).map((v) => String(v ?? "")).join(" ")]);
+}
+
+/** Map each old content id to its new id by natural key, per card type. Ids whose
+ *  natural key no longer exists in the new seed are simply absent (their progress
+ *  is dropped on copy — no orphan rows pointing at nothing). Exported for tests. */
+export function buildCardIdRemap(oldDb: SqlJsDatabase, newDb: SqlJsDatabase): CardIdRemap {
+  const out: CardIdRemap = { word: new Map(), kanji: new Map(), kana: new Map() };
+  for (const s of REMAP_SPECS) {
+    const keyToNewId = new Map(naturalKeyRows(newDb, s.table, s.key).map(([id, key]) => [key, id] as const));
+    for (const [oldId, key] of naturalKeyRows(oldDb, s.table, s.key)) {
+      const newId = keyToNewId.get(key);
+      if (newId !== undefined) out[s.type].set(oldId, newId);
+    }
+  }
+  return out;
+}
+
+/** Rewrite a progress snapshot's card_state/review_log card_id through the remap,
+ *  dropping rows whose card no longer exists. settings (no card_id) passes through
+ *  untouched. Pure — exported for tests. */
+export function remapProgressSnapshot(snap: ProgressSnapshot, remap: CardIdRemap): ProgressSnapshot {
+  const tables: Record<string, TableSnapshot> = {};
+  for (const [name, t] of Object.entries(snap.tables)) {
+    const typeIdx = t.columns.indexOf("card_type");
+    const idIdx = t.columns.indexOf("card_id");
+    if (typeIdx < 0 || idIdx < 0) { tables[name] = t; continue; } // e.g. settings
+    const values: unknown[][] = [];
+    for (const row of t.values) {
+      const newId = remap[row[typeIdx] as keyof CardIdRemap]?.get(row[idIdx] as number);
+      if (newId === undefined) continue; // card vanished from the new seed — drop it
+      const out = row.slice();
+      out[idIdx] = newId;
+      values.push(out);
+    }
+    tables[name] = { columns: t.columns, values };
+  }
+  return { contentVersion: snap.contentVersion, tables };
+}
+
 /** Build the new seed DB and carry the user's progress + settings into it. */
 async function upgradeToSeed(
   SQL: Awaited<ReturnType<typeof initSqlJs>>,
@@ -365,14 +422,19 @@ async function upgradeToSeed(
     newDb.close();
     throw new Error("seed missing expected content — retry later");
   }
-  for (const t of PROGRESS_TABLES) copyTable(oldDb, newDb, t);
+  // Carry progress by NATURAL KEY rather than raw id (kanji ids in particular can
+  // shift between content versions), translating card_state/review_log card_id
+  // old→new and dropping cards that no longer exist. settings passes through. The
+  // new seed already ships a fresh card_state for every current card; merging over
+  // it keeps those rows for new cards and overwrites the ones the user has touched.
+  const remap = buildCardIdRemap(oldDb, newDb);
+  applyProgressSnapshot(newDb, remapProgressSnapshot(snapshotProgress(oldDb), remap), "merge");
   // The overlay can be fresher than the cached base — e.g. a crash between the
   // overlay and full-DB writes of a prior checkpoint leaves the overlay a
-  // generation ahead. Fold it in so no graded card is left behind; INSERT OR
-  // REPLACE keeps any rows the new seed added.
+  // generation ahead. Fold it in (also remapped) so no graded card is left behind.
   if (overlay && overlay.gen >= baseGen) {
     try {
-      applyProgressSnapshot(newDb, overlay, "merge");
+      applyProgressSnapshot(newDb, remapProgressSnapshot(overlay, remap), "merge");
     } catch (e) {
       console.warn("akari: overlay merge during upgrade failed — base progress kept", e);
     }
