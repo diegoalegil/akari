@@ -28,6 +28,7 @@ export function Explain({ context, label = "Explícame" }: { context: ExplainCon
   const [history, setHistory] = useState<Turn[]>([]);
   const [streaming, setStreaming] = useState(false);
   const [input, setInput] = useState("");
+  const [announce, setAnnounce] = useState(""); // sr-only: announced once when an answer/error lands
   const startedRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -43,6 +44,7 @@ export function Explain({ context, label = "Explícame" }: { context: ExplainCon
         const apiKey = getSetting("anthropic_api_key", "").trim();
         if (!apiKey) {
           setHistory([...base, { role: "assistant", text: "Para usar Explícame, añade tu clave de Anthropic en **Ajustes → Explícame · IA**. Es la única función que usa IA — bajo demanda y con tu propia cuenta." }]);
+          setAnnounce("Para usar Explícame, añade tu clave de Anthropic en Ajustes.");
           return;
         }
         const ctx = context
@@ -66,8 +68,10 @@ export function Explain({ context, label = "Explícame" }: { context: ExplainCon
             setHistory([...base, { role: "assistant", text: acc }]);
           }
         }
+        setAnnounce(acc); // the whole answer, announced once (not per token)
       } catch {
         setHistory([...base, { role: "assistant", text: "_No se pudo conectar con la IA. Revisa tu clave en Ajustes._" }]);
+        setAnnounce("No se pudo conectar con la IA. Revisa tu clave en Ajustes.");
       } finally {
         setStreaming(false);
       }
@@ -166,6 +170,10 @@ export function Explain({ context, label = "Explícame" }: { context: ExplainCon
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="m6 6 12 12M18 6 6 18" /></svg>
                 </button>
               </header>
+
+              {/* Sensei streams its answer token-by-token into a non-live div; a
+                  screen reader would hear nothing. Announce the finished answer once. */}
+              <p role="status" aria-live="polite" className="sr-only">{announce}</p>
 
               <div ref={scrollRef} className="flex flex-1 flex-col gap-3 overflow-y-auto px-5 py-4">
                 <div className="rounded-lg border border-dashed border-[color-mix(in_oklab,var(--color-indigo)_30%,transparent)] bg-[color-mix(in_oklab,var(--color-indigo)_8%,transparent)] px-3 py-2 text-sm">

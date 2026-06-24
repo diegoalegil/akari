@@ -78,7 +78,7 @@ export default function KanjiPage() {
             href={`/kanji/${encodeURIComponent(k.literal)}`}
             className="surface group flex flex-col items-center gap-1 p-4 transition-colors hover:border-[var(--color-line-strong)]"
           >
-            <span className="font-jp text-3xl text-[var(--color-fg)] transition-colors group-hover:text-[var(--color-ember)]">{k.literal}</span>
+            <span lang="ja" className="font-jp text-3xl text-[var(--color-fg)] transition-colors group-hover:text-[var(--color-ember)]">{k.literal}</span>
             <span className="line-clamp-1 w-full text-center text-[11px] text-[var(--color-fg-faint)]">{k.meaning}</span>
           </Link>
         ))}
