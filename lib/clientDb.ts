@@ -510,9 +510,11 @@ function ensureColumns(db: SqlJsDatabase): void {
   }
 }
 
-/** Create any index a newer build's queries rely on but an older cached DB (made
- *  before the index shipped) lacks — e.g. the streak window scan in computeStreak.
- *  Idempotent and cheap; a current seed already carries it, so this is a no-op. */
+/** Create any index a newer build's queries rely on but the loaded DB may lack —
+ *  e.g. the streak window scan in computeStreak. This is the actual delivery path
+ *  for both an older cached DB and a seed built before the index was added (the
+ *  shipped seed only carries it once it's rebuilt). Idempotent (IF NOT EXISTS) and
+ *  cheap, so it's a no-op the moment the index is present. */
 function ensureIndexes(db: SqlJsDatabase): void {
   try {
     db.run("CREATE INDEX IF NOT EXISTS idx_reviewlog_revat ON review_log(reviewed_at)");
