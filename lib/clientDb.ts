@@ -45,6 +45,20 @@ function nextGen(): number {
 // becomes dirty, so it never writes — the clobber can't happen.
 let dirty = false;
 
+// Set when a persist hits the storage quota — surfaced so a failed durable write is
+// a known, queryable state instead of a silently-swallowed rejection.
+let storageFull = false;
+/** Whether a write has hit the IndexedDB quota (progress may not be fully durable). */
+export function isStorageFull(): boolean {
+  return storageFull;
+}
+function noteWriteError(e: unknown): void {
+  if ((e as { name?: string } | null)?.name === "QuotaExceededError") {
+    storageFull = true;
+    console.error("akari: storage is full — your progress may not be saved. Free up space or export a backup.", e);
+  }
+}
+
 // ── progress snapshot/apply (pure sql.js; exported for the round-trip tests) ──
 type TableSnapshot = { columns: string[]; values: unknown[][] };
 export type ProgressSnapshot = { contentVersion: number; tables: Record<string, TableSnapshot> };
@@ -136,24 +150,58 @@ async function idbGetFull(): Promise<FullCheckpoint | null> {
   const o = v as { gen?: number; bytes?: unknown };
   return o.bytes instanceof Uint8Array ? { gen: typeof o.gen === "number" ? o.gen : 0, bytes: o.bytes } : null;
 }
+/** A stored overlay is well-formed: each table is {columns:string[], values:rows}
+ *  and every row matches the column count. Rejects a truncated/corrupt overlay so
+ *  it's never applied (which would throw mid-load or silently skip rows). */
+function validTables(tables: unknown): tables is Record<string, TableSnapshot> {
+  if (!tables || typeof tables !== "object") return false;
+  for (const t of Object.values(tables as Record<string, unknown>)) {
+    const ts = t as Partial<TableSnapshot>;
+    if (!ts || !Array.isArray(ts.columns) || !Array.isArray(ts.values)) return false;
+    if (ts.columns.some((c) => typeof c !== "string")) return false;
+    if (ts.values.some((row) => !Array.isArray(row) || row.length !== ts.columns!.length)) return false;
+  }
+  return true;
+}
 async function idbGetOverlay(): Promise<ProgressOverlay | null> {
   const v = await idbGet(IDB_KEY_PROGRESS);
   if (!v || typeof v !== "object") return null;
   const o = v as Partial<ProgressOverlay>;
-  if (typeof o.gen !== "number" || !o.tables) return null;
+  if (typeof o.gen !== "number" || !validTables(o.tables)) return null; // malformed — reject, don't apply
   return { gen: o.gen, contentVersion: typeof o.contentVersion === "number" ? o.contentVersion : 0, tables: o.tables };
 }
 
 // ── persistence ──────────────────────────────────────────────────────────────
+// Before writing our overlay, fold in any NEWER overlay another tab/window wrote to
+// the shared store — otherwise this tab buries that tab's grades under its own older
+// state. At runtime both tabs are the same content version, so ids line up and a
+// plain merge is correct. The dirty/idle guard already stops an idle tab from
+// clobbering; this covers the harder case of two ACTIVE tabs. (Lock-free: the
+// idbGet→idbSet gap is a tiny TOCTOU window; a navigator.locks read-modify-write
+// would close it fully but is deliberately omitted so the pagehide write stays fast.)
+async function foldConcurrentOverlay(): Promise<void> {
+  if (!instance) return;
+  const disk = await idbGetOverlay().catch(() => null);
+  if (!disk || disk.gen <= persistGen) return; // ours is already current — nothing to fold
+  try {
+    applyProgressSnapshot(instance.raw, disk, "merge");
+  } catch (e) {
+    console.warn("akari: could not fold a concurrent tab's progress", e);
+  }
+  persistGen = Math.max(persistGen, disk.gen);
+}
+
 /** Write just the progress overlay (the hot path: runs after every grade). */
 async function persistOverlay(): Promise<void> {
   if (!instance || !dirty) return;
+  await foldConcurrentOverlay();
   dirty = false; // cleared at snapshot time; a write during the await re-sets it
   try {
     const snap = snapshotProgress(instance.raw);
     await idbSet(IDB_KEY_PROGRESS, { gen: nextGen(), contentVersion: snap.contentVersion, tables: snap.tables });
   } catch (e) {
     dirty = true; // write failed — keep us dirty so the next flush/grade retries
+    noteWriteError(e);
     throw e;
   }
 }
@@ -176,6 +224,7 @@ async function persistFull(): Promise<void> {
     await idbSet(IDB_KEY_FULL, { gen, bytes });
   } catch (e) {
     dirty = true;
+    noteWriteError(e);
     throw e;
   }
 }
