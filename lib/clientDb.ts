@@ -510,6 +510,17 @@ function ensureColumns(db: SqlJsDatabase): void {
   }
 }
 
+/** Create any index a newer build's queries rely on but an older cached DB (made
+ *  before the index shipped) lacks — e.g. the streak window scan in computeStreak.
+ *  Idempotent and cheap; a current seed already carries it, so this is a no-op. */
+function ensureIndexes(db: SqlJsDatabase): void {
+  try {
+    db.run("CREATE INDEX IF NOT EXISTS idx_reviewlog_revat ON review_log(reviewed_at)");
+  } catch {
+    /* a non-critical index must never block load; the query still runs, just slower */
+  }
+}
+
 /** Load (once) the client DB: from IndexedDB if present, else the seed asset.
  *  A stale cached DB is upgraded to the current seed, preserving progress. The
  *  small progress overlay (newer than the full checkpoint) is folded back in
@@ -574,6 +585,7 @@ export async function loadClientDb(): Promise<ClientDb> {
         }
       }
       ensureColumns(db);
+      ensureIndexes(db);
       instance = new ClientDb(db);
       // Only the upgrade rebuilt content — refresh the full checkpoint then. A
       // valid current-version base is left untouched: that's the whole point —
@@ -595,6 +607,7 @@ export async function loadClientDb(): Promise<ClientDb> {
       // less re-upgrade next load. This is THIS seed, so it is SEED_VERSION.
       stampVersion(db, SEED_VERSION);
       ensureColumns(db);
+      ensureIndexes(db);
       instance = new ClientDb(db);
       // Only persist when there was NO cache — never overwrite a corrupt one
       // (a transient corruption may still be recoverable; the overlay holds

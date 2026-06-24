@@ -128,5 +128,6 @@ CREATE INDEX IF NOT EXISTS idx_words_order      ON words(kaishi_order);
 CREATE INDEX IF NOT EXISTS idx_cardstate_due    ON card_state(due);
 CREATE INDEX IF NOT EXISTS idx_cardstate_intro  ON card_state(introduced_at);
 CREATE INDEX IF NOT EXISTS idx_reviewlog_card   ON review_log(card_type, card_id);
+CREATE INDEX IF NOT EXISTS idx_reviewlog_revat  ON review_log(reviewed_at);  -- streak window scan
 CREATE INDEX IF NOT EXISTS idx_wordsent_word    ON word_sentences(word_id);
 CREATE INDEX IF NOT EXISTS idx_wordkanji_kanji  ON word_kanji(kanji_id);

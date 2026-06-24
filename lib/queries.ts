@@ -129,15 +129,20 @@ export function getSettings(): AppSettings {
 const count = (db: ReturnType<typeof getDb>, sql: string): number =>
   (db.prepare(sql).get() as { c: number }).c;
 
-/** Consecutive days (ending today or yesterday) with at least one review. */
-export function computeStreak(db: ReturnType<typeof getDb>): number {
-  const days = (
-    db
-      .prepare("SELECT DISTINCT date(reviewed_at, 'localtime') d FROM review_log ORDER BY d DESC")
-      .all() as { d: string }[]
-  ).map((r) => r.d);
-  if (days.length === 0) return 0;
+// A streak can't be longer than the user's history, and the home dashboard only
+// needs the most recent contiguous run — so the DISTINCT-date scan is bounded to
+// this many days instead of all of review_log (which grows unbounded: a 2-year
+// daily user has ~36k rows, and this scan was by far the costliest dashboard
+// query). The window is backed by idx_reviewlog_revat so it's an index range
+// seek, not a full scan. Comfortably larger than any plausible streak; if one
+// somehow reaches the window edge, computeStreak recomputes unbounded, so the
+// result is never capped — only the common case is bounded.
+const STREAK_WINDOW_DAYS = 400;
 
+/** Count consecutive days (ending today or yesterday) from a DESC list of the
+ *  distinct local review dates. */
+function streakFromDays(db: ReturnType<typeof getDb>, days: string[]): number {
+  if (days.length === 0) return 0;
   const today = (db.prepare("SELECT date('now','localtime') d").get() as { d: string }).d;
   const dayMs = 86_400_000;
   const toUTC = (s: string) => Date.parse(s + "T00:00:00Z");
@@ -154,6 +159,31 @@ export function computeStreak(db: ReturnType<typeof getDb>): number {
     }
   }
   return streak;
+}
+
+/** Consecutive days (ending today or yesterday) with at least one review. */
+export function computeStreak(db: ReturnType<typeof getDb>): number {
+  // `reviewed_at` is a UTC ISO timestamp (Date.toISOString), so a plain string
+  // `>=` against a UTC date bounds the rows; the local-date bucketing still runs
+  // in SQL exactly as before.
+  const windowed = (
+    db
+      .prepare(
+        "SELECT DISTINCT date(reviewed_at, 'localtime') d FROM review_log WHERE reviewed_at >= date('now', ?) ORDER BY d DESC",
+      )
+      .all(`-${STREAK_WINDOW_DAYS} days`) as { d: string }[]
+  ).map((r) => r.d);
+  const streak = streakFromDays(db, windowed);
+  // A run that reaches back to the window edge may continue beyond it — recompute
+  // over all history so the count is never capped. Rare: only a streak of
+  // STREAK_WINDOW_DAYS+ ever gets here, where one extra full scan is acceptable.
+  if (streak < STREAK_WINDOW_DAYS) return streak;
+  const all = (
+    db
+      .prepare("SELECT DISTINCT date(reviewed_at, 'localtime') d FROM review_log ORDER BY d DESC")
+      .all() as { d: string }[]
+  ).map((r) => r.d);
+  return streakFromDays(db, all);
 }
 
 export function getStreak(): number {
