@@ -64,6 +64,21 @@ function buildCard(db: ReturnType<typeof getDb>, id: number, isNew: boolean, now
   };
 }
 
+// The leeches: words you keep forgetting (fsrs_lapses ≥ 4 — same threshold the
+// stats page reports). A focused, high-leverage session built from the existing
+// word card; grades through the normal FSRS path. Hardest-first.
+export function getLeechQueue(): ReviewCard[] {
+  const db = getDb();
+  if (!seeded(db)) return [];
+  const ids = db
+    .prepare(
+      "SELECT card_id id FROM card_state WHERE card_type='word' AND fsrs_lapses >= 4 ORDER BY fsrs_lapses DESC, card_id ASC LIMIT 12",
+    )
+    .all() as { id: number }[];
+  const now = new Date();
+  return ids.map((r) => buildCard(db, r.id, false, now)).filter((c): c is ReviewCard => c !== null);
+}
+
 export function getReviewQueue(): ReviewCard[] {
   const db = getDb();
   if (!seeded(db)) return [];

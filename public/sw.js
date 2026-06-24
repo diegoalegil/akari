@@ -18,6 +18,7 @@ const PRECACHE_URLS = [
   // user never opened online still boots that page (not the home shell). The 837
   // dynamic /kanji/<literal> pages are intentionally left to network-first caching.
   "/review",
+  "/review/leeches",
   "/kana",
   "/kana/drill",
   "/kanji",

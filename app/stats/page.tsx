@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { getStats } from "@/lib/stats";
 import { Loading } from "@/components/Loading";
 import { Furigana } from "@/components/Furigana";
@@ -161,6 +162,12 @@ export default function StatsPage() {
               </li>
             ))}
           </ul>
+          <Link
+            href="/review/leeches"
+            className="mt-4 block rounded-xl bg-gradient-to-r from-[var(--color-akari)] to-[var(--color-ember)] py-3 text-center text-sm font-semibold text-[var(--color-ink-deep)] shadow-[var(--akari-glow)] transition-[filter] hover:brightness-105"
+          >
+            Repasar las que se te resisten →
+          </Link>
         </section>
       )}
     </div>
