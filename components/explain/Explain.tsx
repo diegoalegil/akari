@@ -2,7 +2,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getSetting } from "@/lib/queries";
-import { suggestedSenseiPrompts } from "@/lib/senseiPrompts";
+import { suggestedSenseiPrompts, type SenseiPrompt } from "@/lib/senseiPrompts";
 
 export type ExplainContext = { expression: string; reading?: string; meaning?: string; sentence?: string };
 type Turn = { role: "user" | "assistant"; text: string };
@@ -30,7 +30,7 @@ export function Explain({ context, label = "Explícame" }: { context: ExplainCon
   const [streaming, setStreaming] = useState(false);
   const [input, setInput] = useState("");
   const [announce, setAnnounce] = useState(""); // sr-only: announced once when an answer/error lands
-  const [suggestions, setSuggestions] = useState<string[]>([]); // tappable question ideas from the library
+  const [suggestions, setSuggestions] = useState<SenseiPrompt[]>([]); // card-relevant question ideas
   const startedRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -76,7 +76,7 @@ export function Explain({ context, label = "Explícame" }: { context: ExplainCon
         setAnnounce("No se pudo conectar con la IA. Revisa tu clave en Ajustes.");
       } finally {
         setStreaming(false);
-        setSuggestions(suggestedSenseiPrompts()); // fresh ideas after each answer
+        setSuggestions(suggestedSenseiPrompts(context)); // fresh, card-relevant ideas after each answer
       }
     },
     [context, history],
@@ -85,7 +85,7 @@ export function Explain({ context, label = "Explícame" }: { context: ExplainCon
   useEffect(() => {
     if (open && !startedRef.current) {
       startedRef.current = true;
-      setSuggestions(suggestedSenseiPrompts());
+      setSuggestions(suggestedSenseiPrompts(context));
       void ask();
     }
     if (!open) startedRef.current = false;
@@ -198,16 +198,27 @@ export function Explain({ context, label = "Explícame" }: { context: ExplainCon
 
               {!streaming && suggestions.length > 0 && (
                 <div className="border-t border-[var(--color-line)] px-4 pt-3">
-                  <span className="text-[10px] uppercase tracking-wider text-[var(--color-fg-faint)]">Prueba a preguntar</span>
-                  <div className="mt-2 flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] uppercase tracking-wider text-[var(--color-fg-faint)]">Prueba a preguntar</span>
+                    <button
+                      type="button"
+                      onClick={() => setSuggestions(suggestedSenseiPrompts(context))}
+                      aria-label="Otras ideas"
+                      className="grid h-6 w-6 place-items-center rounded-md text-[var(--color-fg-faint)] transition-colors hover:text-[var(--color-indigo)]"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-15 6.7L3 16" /><path d="M3 21v-5h5" /></svg>
+                    </button>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
                     {suggestions.map((s, i) => (
                       <button
                         key={i}
                         type="button"
-                        onClick={() => void ask(s)}
-                        className="rounded-xl border border-[var(--color-line)] bg-[var(--color-surface-2)] px-3 py-2 text-left text-xs leading-snug text-[var(--color-fg-muted)] transition-colors hover:border-[var(--color-indigo)] hover:text-[var(--color-fg)]"
+                        onClick={() => void ask(s.text)}
+                        title={s.text}
+                        className="rounded-full border border-[color-mix(in_oklab,var(--color-indigo)_28%,transparent)] bg-[color-mix(in_oklab,var(--color-indigo)_8%,transparent)] px-3 py-1.5 text-xs text-[var(--color-fg-muted)] transition-colors hover:border-[var(--color-indigo)] hover:text-[var(--color-fg)]"
                       >
-                        {s}
+                        {s.label}
                       </button>
                     ))}
                   </div>
