@@ -2,6 +2,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getSetting } from "@/lib/queries";
+import { suggestedSenseiPrompts } from "@/lib/senseiPrompts";
 
 export type ExplainContext = { expression: string; reading?: string; meaning?: string; sentence?: string };
 type Turn = { role: "user" | "assistant"; text: string };
@@ -29,6 +30,7 @@ export function Explain({ context, label = "Explícame" }: { context: ExplainCon
   const [streaming, setStreaming] = useState(false);
   const [input, setInput] = useState("");
   const [announce, setAnnounce] = useState(""); // sr-only: announced once when an answer/error lands
+  const [suggestions, setSuggestions] = useState<string[]>([]); // tappable question ideas from the library
   const startedRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -74,6 +76,7 @@ export function Explain({ context, label = "Explícame" }: { context: ExplainCon
         setAnnounce("No se pudo conectar con la IA. Revisa tu clave en Ajustes.");
       } finally {
         setStreaming(false);
+        setSuggestions(suggestedSenseiPrompts()); // fresh ideas after each answer
       }
     },
     [context, history],
@@ -82,6 +85,7 @@ export function Explain({ context, label = "Explícame" }: { context: ExplainCon
   useEffect(() => {
     if (open && !startedRef.current) {
       startedRef.current = true;
+      setSuggestions(suggestedSenseiPrompts());
       void ask();
     }
     if (!open) startedRef.current = false;
@@ -191,6 +195,24 @@ export function Explain({ context, label = "Explícame" }: { context: ExplainCon
                   </div>
                 ))}
               </div>
+
+              {!streaming && suggestions.length > 0 && (
+                <div className="border-t border-[var(--color-line)] px-4 pt-3">
+                  <span className="text-[10px] uppercase tracking-wider text-[var(--color-fg-faint)]">Prueba a preguntar</span>
+                  <div className="mt-2 flex flex-col gap-1.5">
+                    {suggestions.map((s, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => void ask(s)}
+                        className="rounded-xl border border-[var(--color-line)] bg-[var(--color-surface-2)] px-3 py-2 text-left text-xs leading-snug text-[var(--color-fg-muted)] transition-colors hover:border-[var(--color-indigo)] hover:text-[var(--color-fg)]"
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <form
                 onSubmit={(e) => {
