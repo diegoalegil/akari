@@ -1,30 +1,46 @@
-import type { ReactNode } from "react";
+"use client";
 
-// Calm, editorial stat tile. Numbers don't count-up (SRS data stays quiet).
+/**
+ * REDISEÑO — a coherent stat tile for the dashboard cluster and Progreso.
+ * Editorial figure (tabular-nums so it never shimmer-shifts), a quiet Spanish
+ * label, a faint font-jp watermark glyph, and a 2px accent bar that teaches the
+ * category at a glance without saturating the surface (vocab=cyan, kanji=sakura,
+ * racha=ember, etc.). Matches the existing `<StatCard label value glyph accent>`
+ * call sites in app/page.tsx.
+ */
 export function StatCard({
   label,
   value,
-  sub,
   glyph,
   accent,
 }: {
   label: string;
-  value: ReactNode;
-  sub?: string;
+  value: string | number;
   glyph?: string;
   accent?: string;
 }) {
   return (
     <div className="surface relative overflow-hidden p-4">
       {glyph && (
-        <span className="font-jp pointer-events-none absolute -right-2 -top-3 select-none text-6xl leading-none text-white/[0.035]">
+        <span
+          lang="ja"
+          aria-hidden
+          className="font-jp pointer-events-none absolute -bottom-3.5 -right-1.5 select-none text-[62px] leading-none text-white/[0.04]"
+        >
           {glyph}
         </span>
       )}
-      <div className="text-2xl font-semibold tracking-tight text-[var(--color-fg)]">{value}</div>
-      <div className="mt-0.5 text-sm text-[var(--color-fg-muted)]">{label}</div>
-      {sub && <div className="mt-1 text-xs text-[var(--color-fg-faint)]">{sub}</div>}
-      {accent && <span className="absolute inset-x-4 bottom-0 h-[2px] rounded-full opacity-70" style={{ background: accent }} />}
+      <div className="text-2xl font-semibold leading-none tracking-tight tabular-nums text-[var(--color-fg)]">
+        {value}
+      </div>
+      <div className="mt-1 text-sm text-[var(--color-fg-muted)]">{label}</div>
+      {accent && (
+        <span
+          aria-hidden
+          className="absolute bottom-0 left-4 h-[2px] w-[30px] rounded-full"
+          style={{ background: accent, opacity: 0.85 }}
+        />
+      )}
     </div>
   );
 }
