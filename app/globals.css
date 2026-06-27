@@ -2,7 +2,11 @@
 
 /* ══ Akari design tokens — dark, "anime-but-refined", lantern soul ══════════
    Canonical values per DESIGN.md: one warm light source, one cool focus
-   language, no pure black/white, hairline dividers, a fixed motion contract. */
+   language, no pure black/white, hairline dividers, a fixed motion contract.
+
+   ✦ REDISEÑO — this file is a drop-in upgrade of the original app/globals.css.
+   Everything additive lives below a "REDISEÑO" banner so a diff is legible.
+   Nothing learning-content-facing changes; only light, type, spacing, motion. */
 @theme {
   /* Ink & surfaces — warm-tinted, never pure black; depth from light */
   --color-ink: #0e0f13;
@@ -14,8 +18,7 @@
   --color-line-strong: #2a2e3a;
 
   /* Text — warm off-white. faint lifted to #8a91a0 so caption-size text clears
-     WCAG AA (≥4.5:1) on every surface it sits on — incl. the deeper surface-2/3
-     (nav, kana cells) where #7c8392 fell to 4.37/3.92 — still de-emphasized. */
+     WCAG AA (≥4.5:1) on every surface it sits on. */
   --color-fg: #f4f1ec;
   --color-fg-muted: #aab0bd;
   --color-fg-faint: #8a91a0;
@@ -43,6 +46,32 @@
   --motion-slow: 220ms;
   --ease-akari: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-akari-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ───────── REDISEÑO · escala tipográfica modular (ratio 1.25) ─────────
+     One named scale so component font-sizes stop being one-off text-[n]. */
+  --text-eyebrow: 0.625rem;  /* 10px — uppercase section labels */
+  --text-caption: 0.75rem;   /* 12px */
+  --text-sm: 0.875rem;       /* 14px */
+  --text-base: 1rem;         /* 16px */
+  --text-lg: 1.25rem;        /* 20px */
+  --text-xl: 1.5625rem;      /* 25px */
+  --text-2xl: 1.953rem;      /* ~31px */
+  --text-3xl: 2.441rem;      /* ~39px */
+  --text-display: clamp(3.25rem, 9vw, 4.75rem); /* hero counter */
+
+  --lh-tight: 1.05;
+  --lh-snug: 1.25;
+  --lh-ui: 1.5;
+  --lh-jp: 1.9;
+
+  --tracking-display: -0.02em;
+  --tracking-eyebrow: 0.14em;
+
+  /* ───────── REDISEÑO · escala de espaciado vertical (rítmica) ─────────
+     Replaces the ad-hoc mt-5/mt-7/mt-8 sprinkled across pages. */
+  --space-tight: 0.75rem;   /* within a block */
+  --space-block: 1.25rem;   /* between sibling cards */
+  --space-section: 2.25rem; /* between major sections */
 }
 
 :root {
@@ -55,6 +84,22 @@
     transparent
   );
   --akari-glow: 0 8px 40px -8px color-mix(in oklab, var(--color-ember) 40%, transparent);
+
+  /* ───────── REDISEÑO · 3 temperaturas de la llama (ligadas a la racha) ─────────
+     Set --flame on a host (0 ember-rojizo → 1 ember-dorado) to warm its glow.
+     The Lantern component maps streak→--flame; everything else inherits calm. */
+  --flame: 0.5;
+  --flame-color: color-mix(in oklab, var(--color-ember) calc(60% + var(--flame) * 40%), var(--color-akari));
+
+  /* Refined focus halo — softer, slightly wider bloom (cat. 9). The 2px inner
+     ring stays crisp for accessibility; the outer is light, not an outline. */
+  --focus-ring:
+    0 0 0 2px var(--color-indigo),
+    0 0 0 7px color-mix(in oklab, var(--color-indigo) 15%, transparent);
+
+  /* A whisper of washi grain — breaks gradient banding on the ink (cat. 9/13).
+     Tiny inline feTurbulence; tile size kept small, opacity barely-there. */
+  --washi-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
 }
 
 /* ══ Base ═══════════════════════════════════════════════════════════════════ */
@@ -71,9 +116,19 @@ html {
   /* iOS: no gray flash box on tap — components provide their own press feedback */
   -webkit-tap-highlight-color: transparent;
 }
-/* iOS: disable the double-tap-to-zoom delay/zoom on tap controls (the core
-   review loop is tap-tap-tap) while keeping pinch-zoom for accessibility. The
-   kanji canvas keeps its own touch-action:none (it's an SVG, not matched here). */
+/* REDISEÑO · washi grain overlay, fixed, non-interactive, behind everything.
+   ~2.5% opacity so it textures the dark without touching text contrast. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: var(--washi-grain);
+  background-size: 140px 140px;
+  opacity: 0.025;
+  mix-blend-mode: overlay;
+}
 button,
 a,
 summary,
@@ -93,9 +148,7 @@ body {
 /* Cool focus language: indigo ring + soft halo as box-shadow (no layout shift) */
 :focus-visible {
   outline: none;
-  box-shadow:
-    0 0 0 2px var(--color-indigo),
-    0 0 0 6px color-mix(in oklab, var(--color-indigo) 18%, transparent);
+  box-shadow: var(--focus-ring);
   border-radius: 6px;
 }
 
@@ -119,13 +172,40 @@ body {
   font-family: var(--font-jp);
 }
 
-/* Furigana ruby — readings sit above the kanji, de-emphasized. Hidden (but the
-   base kanji stay) when the user turns furigana off, via a class on <html>. */
+/* REDISEÑO · tabular numerals — every stat/streak/timer/interval digit, so
+   numbers never shimmer-shift width as they tick (cat. 10). */
+.tnum {
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* REDISEÑO · the eyebrow — one reusable section label with a tiny akari tick,
+   replacing the repeated text-[10px] uppercase tracking-wider (cat. 10). */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: var(--text-eyebrow);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: var(--color-fg-faint);
+}
+.eyebrow::before {
+  content: "";
+  width: 0.3rem;
+  height: 0.3rem;
+  border-radius: 99px;
+  background: var(--color-ember);
+  box-shadow: 0 0 6px color-mix(in oklab, var(--color-ember) 70%, transparent);
+}
+
+/* Furigana ruby — readings sit above the kanji, de-emphasized. */
 ruby {
   ruby-align: center;
 }
 rt {
-  font-size: 0.5em;
+  font-size: 0.52em; /* REDISEÑO · 0.50→0.52, a touch more legible vs the base */
   font-weight: 400;
   line-height: 1.1;
   color: var(--color-fg-muted);
@@ -137,8 +217,7 @@ html.no-furigana rt {
 }
 
 /* Pitch-accent contour: an overline over the high morae + a downstep bar after
-   the accented mora (Tokyo-dialect, OJAD style). Built from a validated integer,
-   never raw HTML. */
+   the accented mora (Tokyo-dialect, OJAD style). */
 .pitch {
   display: inline-flex;
   align-items: flex-start;
@@ -154,7 +233,8 @@ html.no-furigana rt {
   right: 0;
   top: 0.04em;
   height: 0.09em;
-  background: currentColor;
+  /* REDISEÑO · subtle akari→ember gradient on the high band (cat. 5) */
+  background: linear-gradient(90deg, var(--color-akari), var(--color-ember));
   opacity: 0.85;
 }
 .pitch-mora.is-drop::after {
@@ -164,7 +244,7 @@ html.no-furigana rt {
   top: 0.04em;
   height: 0.5em;
   width: 0.09em;
-  background: currentColor;
+  background: var(--color-ember);
   opacity: 0.85;
 }
 html.no-pitch .pitch-mora::before,
@@ -172,7 +252,7 @@ html.no-pitch .pitch-mora::after {
   display: none;
 }
 html.no-pitch .pitch-mora {
-  padding-top: 0; /* collapse the reserved overline band when the contour is off */
+  padding-top: 0;
 }
 
 /* The lantern glow — a soft warm bloom. Use sparingly; it's the signature. */
@@ -186,8 +266,12 @@ html.no-pitch .pitch-mora {
     0 0 0 1px color-mix(in oklab, var(--color-akari) 20%, transparent),
     0 8px 40px -8px color-mix(in oklab, var(--color-akari) 45%, transparent);
 }
+/* REDISEÑO · graduated text-glow: drive --tg (0..1) to scale the bloom with a
+   value (e.g. due-count). Default keeps the original resting intensity. */
 .text-glow {
-  text-shadow: 0 0 24px color-mix(in oklab, var(--color-ember) 55%, transparent);
+  --tg: 0.55;
+  text-shadow: 0 0 calc(14px + var(--tg) * 26px)
+    color-mix(in oklab, var(--color-ember) calc(35% + var(--tg) * 35%), transparent);
 }
 
 /* Hairline card surface */
@@ -195,6 +279,48 @@ html.no-pitch .pitch-mora {
   background: linear-gradient(180deg, var(--color-surface-2), var(--color-surface));
   border: 1px solid var(--color-line);
   border-radius: var(--radius);
+  position: relative;
+}
+/* REDISEÑO · elevation from light (cat. 9): inset top highlight + ambient drop.
+   Applied to .surface globally so cards feel lifted, not outlined. */
+.surface {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 8px 30px -18px rgba(0, 0, 0, 0.55);
+}
+/* REDISEÑO · tactile hover for interactive surfaces (cat. 15). Opt-in via
+   .surface-tap so static cards stay still. */
+.surface-tap {
+  transition:
+    border-color var(--motion-base) var(--ease-akari),
+    transform var(--motion-base) var(--ease-akari),
+    box-shadow var(--motion-base) var(--ease-akari);
+}
+.surface-tap:hover {
+  border-color: color-mix(in oklab, var(--color-ember) 18%, var(--color-line-strong));
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 14px 36px -18px rgba(0, 0, 0, 0.6);
+}
+.surface-tap:active {
+  transform: translateY(0);
+}
+/* REDISEÑO · "lit" surface for the hero pieces (palabra del día, next session):
+   a warm bloom born at the top edge, 1px akari→ember top filament (cat. 15). */
+.surface-lit {
+  background:
+    radial-gradient(120% 80% at 50% -10%, color-mix(in oklab, var(--color-ember) 8%, transparent), transparent 60%),
+    linear-gradient(180deg, var(--color-surface-2), var(--color-surface));
+}
+.surface-lit::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: linear-gradient(90deg, transparent, var(--color-akari), var(--color-ember), transparent);
+  opacity: 0.6;
 }
 
 /* A faint ambient lantern wash behind hero content */
@@ -202,6 +328,59 @@ html.no-pitch .pitch-mora {
   background:
     radial-gradient(60% 50% at 50% 0%, color-mix(in oklab, var(--color-ember) 12%, transparent), transparent 70%),
     radial-gradient(45% 40% at 85% 10%, color-mix(in oklab, var(--color-akari) 9%, transparent), transparent 70%);
+}
+
+/* REDISEÑO · button system (cat. 15) — three honest tiers shared app-wide.
+   Primary always sings (akari→ember + glow); the rest accompany. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  padding: 0.7rem 1.15rem;
+  transition:
+    transform var(--motion-fast) var(--ease-akari-out),
+    filter var(--motion-base) var(--ease-akari),
+    box-shadow var(--motion-base) var(--ease-akari),
+    border-color var(--motion-base) var(--ease-akari);
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--color-akari), var(--color-ember));
+  color: var(--color-ink-deep);
+  box-shadow: var(--akari-glow);
+}
+.btn-primary:hover {
+  filter: brightness(1.05);
+  box-shadow: 0 10px 44px -8px color-mix(in oklab, var(--color-ember) 50%, transparent);
+}
+.btn-primary:active {
+  transform: scale(0.975);
+  filter: brightness(0.97);
+}
+.btn-secondary {
+  background: var(--color-surface-2);
+  color: var(--color-fg);
+  border: 1px solid var(--color-line-strong);
+}
+.btn-secondary:hover {
+  border-color: var(--color-indigo);
+}
+.btn-secondary:active {
+  transform: scale(0.985);
+}
+.btn-ghost {
+  background: transparent;
+  color: var(--color-fg-muted);
+}
+.btn-ghost:hover {
+  color: var(--color-fg);
+}
+.btn:disabled {
+  opacity: 0.5;
+  pointer-events: none;
 }
 
 /* ══ Motion ═════════════════════════════════════════════════════════════════ */
@@ -216,15 +395,30 @@ html.no-pitch .pitch-mora {
 @keyframes shimmer {
   100% { background-position: 200% 0; }
 }
+/* REDISEÑO · one-shot ignition ring (streak milestone / session complete) */
+@keyframes ignite-ring {
+  0% { transform: scale(0.6); opacity: 0.55; }
+  100% { transform: scale(2.1); opacity: 0; }
+}
+/* REDISEÑO · drifting ember spark (rewards) */
+@keyframes ember-rise {
+  0% { transform: translateY(0) scale(1); opacity: 0; }
+  20% { opacity: 0.9; }
+  100% { transform: translateY(-46px) scale(0.3); opacity: 0; }
+}
+/* REDISEÑO · ember spinner (button loading state) */
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* REDISEÑO · skeleton shimmer is an ember sweep, not a gray bar (cat. 9). */
 .skeleton {
   background: linear-gradient(
     90deg,
     var(--color-surface-2) 25%,
-    color-mix(in oklab, var(--color-ember) 8%, var(--color-surface-3)) 50%,
+    color-mix(in oklab, var(--color-ember) 9%, var(--color-surface-3)) 50%,
     var(--color-surface-2) 75%
   );
   background-size: 200% 100%;
-  animation: shimmer 1.6s ease-in-out infinite;
+  animation: shimmer 1.6s var(--ease-akari) infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -253,4 +447,9 @@ html[data-theme="indigo"] {
   --color-surface: #15182a;
   --color-surface-2: #1b1f36;
   --color-surface-3: #242a45;
+}
+/* REDISEÑO · in indigo-night, nudge the warm glow a touch more sakura-pink so
+   the lantern contrasts the cool ink instead of muddying into it (cat. 9). */
+html[data-theme="indigo"] {
+  --flame-color: color-mix(in oklab, var(--color-ember) calc(48% + var(--flame) * 38%), var(--color-akari));
 }
