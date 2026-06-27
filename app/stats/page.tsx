@@ -1,30 +1,48 @@
 "use client";
 import Link from "next/link";
+import { motion, useReducedMotion } from "framer-motion";
 import { getStats } from "@/lib/stats";
 import { Loading } from "@/components/Loading";
 import { Furigana } from "@/components/Furigana";
+import { Eyebrow } from "@/components/Eyebrow";
+import { Heatmap } from "@/components/stats/Heatmap";
+import { ProgressBar } from "@/components/stats/ProgressBar";
 import { useDbReady } from "@/lib/useDb";
 
+const EASE = [0.22, 1, 0.36, 1] as const;
 const pct = (v: number | null) => (v == null ? "—" : `${Math.round(v * 100)}%`);
 
-function StatTop({ value, label, accent }: { value: string; label: string; accent?: string }) {
+// A section that fades+rises into view once, calm and never loud.
+function Section({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  const reduce = useReducedMotion();
+  return (
+    <motion.section
+      className={`surface p-5 ${className}`}
+      initial={reduce ? false : { opacity: 0, y: 12 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.2 }}
+      transition={{ duration: reduce ? 0 : 0.4, ease: EASE }}
+    >
+      {children}
+    </motion.section>
+  );
+}
+
+function StatTop({ value, label, hero = false }: { value: string; label: string; hero?: boolean }) {
   return (
     <div className="px-5 py-4">
-      <div className="text-3xl font-semibold tracking-tight text-[var(--color-fg)]">
+      <div
+        className={
+          hero
+            ? "text-glow text-[2.4rem] font-bold leading-none tracking-tight tabular-nums text-[var(--color-akari)]"
+            : "text-3xl font-semibold leading-none tracking-tight tabular-nums text-[var(--color-fg)]"
+        }
+      >
         {value}
-        {accent && <span className="ml-0.5 inline-block h-[3px] w-8 align-middle" style={{ background: accent }} />}
       </div>
       <div className="mt-1 text-sm text-[var(--color-fg-muted)]">{label}</div>
     </div>
   );
-}
-
-function heatColor(count: number, max: number): string {
-  if (count <= 0) return "var(--color-surface-2)";
-  const t = max ? count / max : 0;
-  const mix = t <= 0.25 ? 22 : t <= 0.5 ? 40 : t <= 0.75 ? 58 : 78;
-  const base = t > 0.6 ? "var(--color-akari)" : "var(--color-ember)";
-  return `color-mix(in oklab, ${base} ${mix}%, var(--color-surface-3))`;
 }
 
 export default function StatsPage() {
@@ -33,18 +51,17 @@ export default function StatsPage() {
   const s = getStats();
   const fcMax = Math.max(1, ...s.forecast.map((f) => f.count));
 
-  // Day 0: a warm "come back after your first session" instead of grids of zeros.
   if (s.totalReviews === 0) {
     return (
       <div className="mx-auto max-w-4xl px-5 py-8 md:px-8 md:py-12">
         <h1 className="text-2xl font-semibold tracking-tight">Progreso</h1>
         <p className="mt-1 text-sm text-[var(--color-fg-muted)]">La luz que vas a encender.</p>
         <div className="surface mt-8 flex flex-col items-center gap-4 px-6 py-12 text-center">
-          <span lang="ja" className="font-jp text-4xl text-[var(--color-ember)]">灯</span>
+          <span lang="ja" className="font-jp text-4xl text-[var(--color-ember)] text-glow">灯</span>
           <p className="max-w-sm text-pretty text-[var(--color-fg-muted)]">
             Tu retención, racha, mapa de actividad y pronóstico aparecerán aquí en cuanto termines tu primera sesión de repaso.
           </p>
-          <Link href="/review" className="mt-2 rounded-xl bg-gradient-to-r from-[var(--color-akari)] to-[var(--color-ember)] px-5 py-2.5 font-semibold text-[var(--color-ink-deep)] shadow-[var(--akari-glow)] transition-[filter] hover:brightness-105">
+          <Link href="/review" className="btn btn-primary mt-2">
             Empezar a estudiar →
           </Link>
         </div>
@@ -57,41 +74,30 @@ export default function StatsPage() {
       <h1 className="text-2xl font-semibold tracking-tight">Progreso</h1>
       <p className="mt-1 text-sm text-[var(--color-fg-muted)]">La luz que ya has encendido.</p>
 
-      {/* top metrics */}
+      {/* top metrics — retention is the hero */}
       <div className="surface mt-6 grid grid-cols-2 divide-x divide-y divide-[var(--color-line)] sm:grid-cols-4 sm:divide-y-0">
-        <StatTop value={pct(s.retention)} label="retención" accent="var(--color-akari)" />
+        <StatTop value={pct(s.retention)} label="retención" hero />
         <StatTop value={String(s.streak)} label="días de racha" />
         <StatTop value={String(s.viewsToday)} label="vistas hoy" />
         <StatTop value={pct(s.mastery)} label="dominio" />
       </div>
 
-      {/* heatmap */}
-      <section className="surface mt-5 p-5">
-        <div className="text-[10px] uppercase tracking-wider text-[var(--color-fg-faint)]">Actividad</div>
-        <h2 className="mt-0.5 font-medium text-[var(--color-fg)]">Último año de repasos</h2>
-        <div className="mt-4 overflow-x-auto pb-1">
-          <div className="grid grid-flow-col grid-rows-7 gap-[3px]" style={{ width: "max-content" }}>
-            {s.heatmap.map((d) => (
-              <div key={d.date} role="img" aria-label={`${d.date}: ${d.count} ${d.count === 1 ? "repaso" : "repasos"}`} title={`${d.date}: ${d.count}`} className="h-3 w-3 rounded-[3px]" style={{ background: heatColor(d.count, s.heatmapMax) }} />
-            ))}
-          </div>
+      {/* heatmap — field of lanterns */}
+      <Section className="mt-5">
+        <Eyebrow>Actividad</Eyebrow>
+        <h2 className="mt-1.5 font-medium text-[var(--color-fg)]">Último año de repasos</h2>
+        <div className="mt-4">
+          <Heatmap cells={s.heatmap} max={s.heatmapMax} />
         </div>
-        <div className="mt-3 flex items-center justify-end gap-1.5 text-[10px] text-[var(--color-fg-faint)]">
-          menos
-          {[0, 0.3, 0.6, 1].map((t, i) => (
-            <span key={i} className="h-2.5 w-2.5 rounded-[3px]" style={{ background: heatColor(t * s.heatmapMax || (t ? 1 : 0), s.heatmapMax || 1) }} />
-          ))}
-          más
-        </div>
-      </section>
+      </Section>
 
       <div className="mt-5 grid gap-5 md:grid-cols-2">
-        {/* Kanji handwriting mastery — by school grade */}
-        <section className="surface p-5">
+        {/* kanji handwriting by grade */}
+        <Section>
           <div className="flex items-baseline justify-between">
             <div>
-              <div className="text-[10px] uppercase tracking-wider text-[var(--color-fg-faint)]">Dominio</div>
-              <h2 className="mt-0.5 font-medium text-[var(--color-fg)]">Trazos de kanji</h2>
+              <Eyebrow>Dominio</Eyebrow>
+              <h2 className="mt-1.5 font-medium text-[var(--color-fg)]">Trazos de kanji</h2>
             </div>
             <div className="text-right">
               <div className="text-lg font-semibold tabular-nums text-[var(--color-fg)]">
@@ -106,30 +112,35 @@ export default function StatsPage() {
           ) : (
             <div className="mt-4 flex flex-col gap-3">
               {s.kanjiByGrade.map((g) => (
-                <div key={g.label}>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-[var(--color-fg-muted)]">{g.label === "+" ? "Avanzado" : `Grado ${g.label}`}</span>
-                    <span className="tabular-nums text-[var(--color-fg-faint)]">{g.known} / {g.total}</span>
-                  </div>
-                  <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-[var(--color-surface-3)]">
-                    <div className="h-full rounded-full bg-gradient-to-r from-[var(--color-ember)] to-[var(--color-akari)]" style={{ width: `${g.total ? (g.known / g.total) * 100 : 0}%` }} />
-                  </div>
-                </div>
+                <ProgressBar key={g.label} value={g.known} total={g.total} label={g.label === "+" ? "Avanzado" : `Grado ${g.label}`} />
               ))}
             </div>
           )}
-        </section>
+        </Section>
 
-        {/* forecast */}
-        <section className="surface p-5">
-          <div className="text-[10px] uppercase tracking-wider text-[var(--color-fg-faint)]">Pronóstico</div>
-          <h2 className="mt-0.5 font-medium text-[var(--color-fg)]">Vencen en 14 días</h2>
+        {/* forecast — future loses light toward +14d */}
+        <Section>
+          <Eyebrow>Pronóstico</Eyebrow>
+          <h2 className="mt-1.5 font-medium text-[var(--color-fg)]">Vencen en 14 días</h2>
           <div className="mt-5 flex h-32 items-end gap-1.5">
             {s.forecast.map((f, i) => (
-              <div key={f.date} role="img" aria-label={`${f.date}: ${f.count} ${f.count === 1 ? "repaso" : "repasos"}`} className="flex flex-1 flex-col items-center justify-end" title={`${f.date}: ${f.count}`}>
-                <div
-                  className="w-full rounded-t-[3px]"
-                  style={{ height: `${(f.count / fcMax) * 100}%`, minHeight: f.count ? 4 : 2, background: i === 0 ? "var(--color-akari)" : "color-mix(in oklab, var(--color-indigo) 70%, transparent)" }}
+              <div
+                key={f.date}
+                role="img"
+                aria-label={`${f.date}: ${f.count} ${f.count === 1 ? "repaso" : "repasos"}`}
+                className="group flex flex-1 flex-col items-center justify-end"
+                title={`${f.date}: ${f.count}`}
+              >
+                <motion.div
+                  className="w-full rounded-t-[3px] transition-[filter] group-hover:brightness-125"
+                  initial={{ height: 0 }}
+                  whileInView={{ height: `${(f.count / fcMax) * 100}%` }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, ease: EASE, delay: i * 0.02 }}
+                  style={{
+                    minHeight: f.count ? 4 : 2,
+                    background: i === 0 ? "var(--color-akari)" : `color-mix(in oklab, var(--color-indigo) ${Math.max(20, 70 - i * 3)}%, transparent)`,
+                  }}
                 />
               </div>
             ))}
@@ -138,41 +149,39 @@ export default function StatsPage() {
             <span>hoy</span>
             <span>+14 d</span>
           </div>
-        </section>
+        </Section>
       </div>
 
-      {/* Vocabulary mastery by JLPT level (words.jlpt is ~87% tagged) */}
+      {/* JLPT */}
       {!s.jlpt.every((j) => j.total === 0) && (
-        <section className="surface mt-5 p-5">
-          <div className="text-[10px] uppercase tracking-wider text-[var(--color-fg-faint)]">Dominio</div>
-          <h2 className="mt-0.5 font-medium text-[var(--color-fg)]">Vocabulario por nivel JLPT</h2>
+        <Section className="mt-5">
+          <Eyebrow>Dominio</Eyebrow>
+          <h2 className="mt-1.5 font-medium text-[var(--color-fg)]">Vocabulario por nivel JLPT</h2>
           <div className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2">
             {s.jlpt.map((j) => (
-              <div key={j.level}>
-                <div className="flex justify-between text-sm">
-                  <span className="text-[var(--color-fg-muted)]">{j.level}</span>
-                  <span className="tabular-nums text-[var(--color-fg-faint)]">{j.known} / {j.total}</span>
-                </div>
-                <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-[var(--color-surface-3)]">
-                  <div className="h-full rounded-full bg-gradient-to-r from-[var(--color-good)] to-[var(--color-easy)]" style={{ width: `${j.total ? (j.known / j.total) * 100 : 0}%` }} />
-                </div>
-              </div>
+              <ProgressBar key={j.level} value={j.known} total={j.total} label={j.level} from="var(--color-good)" to="var(--color-easy)" />
             ))}
           </div>
-        </section>
+        </Section>
       )}
 
-      {/* Leeches — words that keep slipping, worth extra attention */}
+      {/* leeches */}
       {s.leeches.length > 0 && (
-        <section className="surface mt-5 p-5">
-          <div className="text-[10px] uppercase tracking-wider text-[var(--color-fg-faint)]">Se te resisten</div>
-          <h2 className="mt-0.5 font-medium text-[var(--color-fg)]">Palabras que más olvidas</h2>
+        <Section className="mt-5">
+          <Eyebrow>Se te resisten</Eyebrow>
+          <h2 className="mt-1.5 font-medium text-[var(--color-fg)]">Palabras que más olvidas</h2>
           <p className="mt-1 text-sm text-[var(--color-fg-muted)]">Las que más veces se te han escapado. Dales un repaso extra.</p>
-          <ul className="mt-4 flex flex-col divide-y divide-[var(--color-line)]">
+          <ul className="mt-4 flex flex-col">
             {s.leeches.map((w, i) => (
-              <li key={w.expression + i} className="flex items-center justify-between gap-3 py-2.5">
+              <li
+                key={w.expression + i}
+                className="flex items-center justify-between gap-3 rounded-lg border-l-2 py-2.5 pl-3 transition-colors hover:bg-[color-mix(in_oklab,var(--color-again)_6%,transparent)]"
+                style={{ borderLeftColor: `color-mix(in oklab, var(--color-again) ${30 + w.lapses * 8}%, transparent)` }}
+              >
                 <div className="min-w-0">
-                  <span lang="ja" className="font-jp text-lg leading-relaxed text-[var(--color-fg)]"><Furigana text={w.furigana} fallback={w.expression} /></span>
+                  <span lang="ja" className="font-jp text-lg leading-relaxed text-[var(--color-fg)]">
+                    <Furigana text={w.furigana} fallback={w.expression} />
+                  </span>
                   <span className="ml-2 text-sm text-[var(--color-fg-muted)]">· {w.meaning}</span>
                 </div>
                 <span className="shrink-0 rounded-full bg-[color-mix(in_oklab,var(--color-again)_18%,transparent)] px-2 py-0.5 text-xs font-medium tabular-nums text-[var(--color-again)]">
@@ -181,13 +190,10 @@ export default function StatsPage() {
               </li>
             ))}
           </ul>
-          <Link
-            href="/review/leeches"
-            className="mt-4 block rounded-xl bg-gradient-to-r from-[var(--color-akari)] to-[var(--color-ember)] py-3 text-center text-sm font-semibold text-[var(--color-ink-deep)] shadow-[var(--akari-glow)] transition-[filter] hover:brightness-105"
-          >
+          <Link href="/review/leeches" className="btn btn-primary mt-4 block w-full text-center">
             Repasar las que se te resisten →
           </Link>
-        </section>
+        </Section>
       )}
     </div>
   );

@@ -1,5 +1,7 @@
 "use client";
 import Link from "next/link";
+import { animate, motion, useMotionValue, useReducedMotion, useTransform } from "framer-motion";
+import { useEffect } from "react";
 import { Lantern } from "@/components/Lantern";
 import { Loading } from "@/components/Loading";
 import { Reveal } from "@/components/Reveal";
@@ -10,6 +12,9 @@ import { WordOfDay } from "@/components/WordOfDay";
 import { getDashboard, getWordOfDay } from "@/lib/queries";
 import { useDbReady } from "@/lib/useDb";
 
+const EASE = [0.22, 1, 0.36, 1] as const;
+const NF = new Intl.NumberFormat("es-ES");
+
 function greeting(): string {
   const h = new Date().getHours();
   if (h < 6) return "Buenas noches";
@@ -18,10 +23,28 @@ function greeting(): string {
   return "Buenas noches";
 }
 
-const NF = new Intl.NumberFormat("es-ES");
+// The hero figure "lights up" — counts from 0 to its value over ~0.55s on mount,
+// the text-glow growing with it. Instant under reduced-motion.
+function CountUp({ to }: { to: number }) {
+  const reduce = useReducedMotion();
+  const mv = useMotionValue(reduce ? to : 0);
+  const text = useTransform(mv, (v) => String(Math.round(v)));
+  const glow = useTransform(mv, [0, to || 1], [0.35, 0.85]);
+  useEffect(() => {
+    if (reduce) return;
+    const controls = animate(mv, to, { duration: 0.55, ease: EASE });
+    return controls.stop;
+  }, [to, reduce, mv]);
+  return (
+    <motion.div
+      className="text-glow font-jp text-6xl font-semibold leading-none tracking-tight tabular-nums text-[var(--color-fg)]"
+      style={{ ["--tg" as string]: glow }}
+    >
+      <motion.span>{text}</motion.span>
+    </motion.div>
+  );
+}
 
-// Status line for a study surface: due reviews take priority over new cards,
-// falling back to a static description when nothing is waiting.
 function surfaceSub(due: number, newAvail: number, idle: string): string {
   if (due > 0) return `${due} ${due === 1 ? "tarjeta lista" : "tarjetas listas"}`;
   if (newAvail > 0) return `${newAvail} ${newAvail === 1 ? "nueva por empezar" : "nuevas por empezar"}`;
@@ -30,7 +53,14 @@ function surfaceSub(due: number, newAvail: number, idle: string): string {
 
 function SurfaceTile({ href, title, sub, due, glyph, accent }: { href: string; title: string; sub: string; due: number; glyph: string; accent: string }) {
   return (
-    <Link href={href} className="surface group relative flex items-center justify-between p-5 transition-colors hover:border-[var(--color-line-strong)]" style={{ ["--hover" as string]: accent }}>
+    <Link
+      href={href}
+      className="surface surface-tap group relative flex items-center justify-between overflow-hidden p-5"
+      style={{ ["--hover" as string]: accent }}
+    >
+      <span lang="ja" aria-hidden className="font-jp pointer-events-none absolute -bottom-[18px] -right-[10px] select-none text-[74px] leading-none text-white/[0.035]">
+        {glyph}
+      </span>
       <div>
         <div className="flex items-center gap-2">
           <span className="font-medium text-[var(--color-fg)]">{title}</span>
@@ -62,8 +92,7 @@ export default function Home() {
           <Lantern size={72} />
           <h1 className="text-xl font-semibold">Akari aún no tiene datos</h1>
           <p className="text-[var(--color-fg-muted)]">
-            Ejecuta <code className="rounded bg-[var(--color-surface-2)] px-1.5 py-0.5 text-sm">npm run seed</code> para
-            sembrar la base de datos.
+            Ejecuta <code className="rounded bg-[var(--color-surface-2)] px-1.5 py-0.5 text-sm">npm run seed</code> para sembrar la base de datos.
           </p>
         </div>
       </div>
@@ -89,7 +118,7 @@ export default function Home() {
       {/* Hero — today's session */}
       <Reveal delay={0.04}>
         <section className="surface ambient-lantern relative mt-3 overflow-hidden p-7 md:p-9">
-          <span aria-hidden="true" className="font-jp pointer-events-none absolute -right-8 -top-14 select-none text-[13rem] leading-none text-white/[0.03]">
+          <span aria-hidden lang="ja" className="font-jp pointer-events-none absolute -right-8 -top-14 select-none text-[13rem] leading-none text-white/[0.03]">
             灯
           </span>
           <h1 className="text-xl font-medium text-[var(--color-fg-muted)]">Tu sesión de hoy</h1>
@@ -98,15 +127,15 @@ export default function Home() {
             <>
               <div className="mt-5 flex items-end gap-7">
                 <div>
-                  <div className="text-glow text-6xl font-semibold leading-none tracking-tight text-[var(--color-fg)]">{ready}</div>
+                  <CountUp to={ready} />
                   <div className="mt-2 text-sm text-[var(--color-fg-muted)]">{ready === 1 ? "tarjeta lista" : "tarjetas listas"}</div>
                 </div>
                 <ul className="mb-1 space-y-1 text-sm text-[var(--color-fg-muted)]">
                   <li>
-                    <span className="text-[var(--color-fg)]">{d.dueNow}</span> {d.dueNow === 1 ? "repaso vencido" : "repasos vencidos"}
+                    <span className="text-[var(--color-fg)] tabular-nums">{d.dueNow}</span> {d.dueNow === 1 ? "repaso vencido" : "repasos vencidos"}
                   </li>
                   <li>
-                    <span className="text-[var(--color-fg)]">{d.newRemaining}</span> {d.newRemaining === 1 ? "palabra nueva" : "palabras nuevas"}
+                    <span className="text-[var(--color-fg)] tabular-nums">{d.newRemaining}</span> {d.newRemaining === 1 ? "palabra nueva" : "palabras nuevas"}
                   </li>
                 </ul>
               </div>
@@ -119,14 +148,14 @@ export default function Home() {
                 <div>
                   <p className="text-lg text-[var(--color-fg)]">Vocabulario al día.</p>
                   <p className="text-sm text-[var(--color-fg-muted)]">
-                    Aún te {kanjiReady + kanaReady === 1 ? "queda" : "quedan"}{kanjiReady > 0 ? ` ${kanjiReady} kanji` : ""}{kanjiReady > 0 && kanaReady > 0 ? " y" : ""}{kanaReady > 0 ? ` ${kanaReady} kana` : ""} por practicar.
+                    Aún te {kanjiReady + kanaReady === 1 ? "queda" : "quedan"}
+                    {kanjiReady > 0 ? ` ${kanjiReady} kanji` : ""}
+                    {kanjiReady > 0 && kanaReady > 0 ? " y" : ""}
+                    {kanaReady > 0 ? ` ${kanaReady} kana` : ""} por practicar.
                   </p>
                 </div>
               </div>
-              <Link
-                href={kanjiReady > 0 ? "/kanji/write" : `/kana/drill?script=${d.kana.script}&mode=recognition`}
-                className="shrink-0 rounded-xl bg-gradient-to-r from-[var(--color-akari)] to-[var(--color-ember)] px-5 py-2.5 text-center font-semibold text-[var(--color-ink-deep)] shadow-[var(--akari-glow)] transition-[filter] hover:brightness-105"
-              >
+              <Link href={kanjiReady > 0 ? "/kanji/write" : `/kana/drill?script=${d.kana.script}&mode=recognition`} className="btn btn-primary shrink-0">
                 {kanjiReady > 0 ? "Escribir kanji" : "Practicar kana"} →
               </Link>
             </div>
@@ -153,9 +182,9 @@ export default function Home() {
       {/* recent kanji */}
       {d.recentKanji.length > 0 && (
         <Reveal delay={0.06}>
-          <div className="mt-5 flex gap-2.5 overflow-x-auto pb-1">
+          <div className="mt-5 flex gap-2.5 overflow-x-auto pb-1 [scrollbar-width:none] [mask-image:linear-gradient(90deg,transparent,#000_24px,#000_calc(100%-24px),transparent)] [&::-webkit-scrollbar]:hidden">
             {d.recentKanji.map((k) => (
-              <Link key={k.literal} href={`/kanji/${encodeURIComponent(k.literal)}`} className="surface flex min-w-[72px] flex-col items-center gap-1 px-4 py-3 transition-colors hover:border-[var(--color-line-strong)]">
+              <Link key={k.literal} href={`/kanji/${encodeURIComponent(k.literal)}`} className="surface surface-tap flex min-w-[72px] flex-col items-center gap-1 px-4 py-3">
                 <span lang="ja" className="font-jp text-2xl text-[var(--color-fg)]">{k.literal}</span>
                 <span lang="ja" className="font-jp text-[11px] text-[var(--color-fg-faint)]">{k.reading}</span>
               </Link>
@@ -168,13 +197,13 @@ export default function Home() {
         </Reveal>
       )}
 
-      {/* Streak + stats */}
+      {/* Streak + stats — one coherent set */}
       <div className="mt-5 grid grid-cols-2 gap-4 md:grid-cols-4">
         <Reveal delay={0.08}>
           <div className="surface relative flex items-center gap-3 overflow-hidden p-4">
             <Lantern size={34} animated={d.streak > 0} intensity={Math.min(1, d.streak / 30)} />
             <div>
-              <div className="text-2xl font-semibold leading-none">{d.streak}</div>
+              <div className="text-2xl font-semibold leading-none tabular-nums">{d.streak}</div>
               <div className="mt-1 text-sm text-[var(--color-fg-muted)]">días de racha</div>
             </div>
             <span className="absolute inset-x-4 bottom-0 h-[2px] rounded-full bg-[var(--color-ember)] opacity-70" />
@@ -191,42 +220,14 @@ export default function Home() {
         </Reveal>
       </div>
 
-      {/* Other study surfaces — kanji handwriting + kana, with live counts */}
+      {/* Other study surfaces */}
       <Reveal delay={0.24}>
-        <h2 className="mb-3 mt-7 text-[10px] uppercase tracking-wider text-[var(--color-fg-faint)]">Practica también</h2>
+        <h2 className="mb-3 mt-7 inline-flex items-center gap-2 text-[10px] uppercase tracking-wider text-[var(--color-fg-faint)]">Practica también</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <SurfaceTile
-            href={d.kanji.due + d.kanji.newAvail > 0 ? "/kanji/write" : "/kanji"}
-            title="Escribir kanji"
-            sub={surfaceSub(d.kanji.due, d.kanji.newAvail, "trazo a trazo, a mano")}
-            due={d.kanji.due}
-            glyph="書"
-            accent="var(--color-ember)"
-          />
-          <SurfaceTile
-            href="/kana"
-            title="Entrenador de kana"
-            sub={surfaceSub(d.kana.due, d.kana.newAvail, `${d.totals.kana} hiragana + katakana`)}
-            due={d.kana.due}
-            glyph="あ"
-            accent="var(--color-akari)"
-          />
-          <SurfaceTile
-            href="/pitch/drill"
-            title="Acento tonal"
-            sub="elige el contorno correcto · práctica"
-            due={0}
-            glyph="音"
-            accent="var(--color-indigo)"
-          />
-          <SurfaceTile
-            href="/shadow"
-            title="Escucha y repite"
-            sub="shadowing · pronunciación"
-            due={0}
-            glyph="声"
-            accent="var(--color-good)"
-          />
+          <SurfaceTile href={d.kanji.due + d.kanji.newAvail > 0 ? "/kanji/write" : "/kanji"} title="Escribir kanji" sub={surfaceSub(d.kanji.due, d.kanji.newAvail, "trazo a trazo, a mano")} due={d.kanji.due} glyph="書" accent="var(--color-ember)" />
+          <SurfaceTile href="/kana" title="Entrenador de kana" sub={surfaceSub(d.kana.due, d.kana.newAvail, `${d.totals.kana} hiragana + katakana`)} due={d.kana.due} glyph="あ" accent="var(--color-akari)" />
+          <SurfaceTile href="/pitch/drill" title="Acento tonal" sub="elige el contorno correcto · práctica" due={0} glyph="音" accent="var(--color-indigo)" />
+          <SurfaceTile href="/shadow" title="Escucha y repite" sub="shadowing · pronunciación" due={0} glyph="声" accent="var(--color-good)" />
         </div>
       </Reveal>
     </div>

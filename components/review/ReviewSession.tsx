@@ -8,6 +8,8 @@ import { Lantern } from "@/components/Lantern";
 import { Explain } from "@/components/explain/Explain";
 import { Furigana } from "@/components/Furigana";
 import { PitchAccent } from "@/components/PitchAccent";
+import { Speaker } from "@/components/Speaker";
+import { GradeButtons } from "@/components/review/GradeButtons";
 import { clozeFurigana, type ClozeToken } from "@/lib/cloze";
 import { kanjiWriteCounts } from "@/lib/kanjiDrill";
 import { kanaCounts } from "@/lib/kana";
@@ -15,87 +17,26 @@ import { getSetting, getStreak } from "@/lib/queries";
 import { playSound } from "@/lib/sound";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
-const GRADE_SND = ["again", "hard", "good", "easy"] as const;
+const BLANK_INTERVALS = { again: "", hard: "", good: "", easy: "" };
 
-const GRADES = [
-  { g: 1, label: "Otra vez", color: "var(--color-again)", key: "1" },
-  { g: 2, label: "Difícil", color: "var(--color-hard)", key: "2" },
-  { g: 3, label: "Bien", color: "var(--color-good)", key: "3" },
-  { g: 4, label: "Fácil", color: "var(--color-easy)", key: "4" },
-] as const;
-
-// Audio button with playback state: announces pressed state, pulses while
-// playing, and degrades to a dormant "sin audio" chip if the clip 404s/errors.
-function Speaker({ src, label = "Reproducir audio", big = false }: { src: string; label?: string; big?: boolean }) {
-  const ref = useRef<HTMLAudioElement>(null);
-  const [playing, setPlaying] = useState(false);
-  const [failed, setFailed] = useState(false);
-
-  if (failed) {
-    return (
-      <span
-        aria-label="Sin audio disponible"
-        title="Sin audio"
-        className={`inline-grid place-items-center rounded-full border border-dashed border-[var(--color-line)] text-[var(--color-fg-faint)] h-11 w-11`}
-      >
-        <svg width={big ? 18 : 14} height={big ? 18 : 14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M11 5 6 9H3v6h3l5 4V5Z" /><path d="m17 9 4 4M21 9l-4 4" />
-        </svg>
-      </span>
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      aria-pressed={playing}
-      onClick={() => {
-        const a = ref.current;
-        if (a) {
-          a.currentTime = 0;
-          a.play().catch(() => setFailed(true));
-        }
-      }}
-      className={`inline-grid place-items-center rounded-full border border-[var(--color-line-strong)] text-[var(--color-fg-muted)] transition-colors hover:border-[var(--color-ember)] hover:text-[var(--color-ember)] aria-pressed:border-[var(--color-ember)] aria-pressed:text-[var(--color-ember)] h-11 w-11`}
-    >
-      <motion.svg
-        width={big ? 20 : 16}
-        height={big ? 20 : 16}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-        animate={playing ? { scale: [1, 1.12, 1] } : { scale: 1 }}
-        transition={playing ? { duration: 0.6, repeat: Infinity } : { duration: 0.2 }}
-      >
-        <path d="M11 5 6 9H3v6h3l5 4V5Z" />
-        <path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" />
-      </motion.svg>
-      <audio
-        ref={ref}
-        src={src}
-        preload="none"
-        onPlay={() => setPlaying(true)}
-        onEnded={() => setPlaying(false)}
-        onPause={() => setPlaying(false)}
-        onError={() => setFailed(true)}
-      />
-    </button>
-  );
-}
-
-// Render a cloze sentence: the headword run becomes an underlined gap, the rest
-// keeps its furigana ruby.
+/**
+ * REDISEÑO — same logic and modes as the original; the presentation is upgraded:
+ *  - the card "ignites" on reveal (akari-glow grows from the centre), not a hard
+ *    background swap;
+ *  - the grade row is the shared <GradeButtons/> (per-grade glow + interval
+ *    hierarchy + 1–4 chips);
+ *  - audio uses the shared <Speaker/> (concentric ember rings while playing).
+ * Behaviour (queue, re-queue on "Otra vez", iOS audio unlock, keyboard, daily
+ * chaining, reduced-motion) is preserved verbatim.
+ */
 function ClozeSentence({ tokens }: { tokens: ClozeToken[] }) {
   return (
     <span lang="ja" className="font-jp">
       {tokens.map((t, i) =>
         "blank" in t ? (
-          <span key={i} aria-label="palabra oculta" className="mx-1 inline-block min-w-[2.5em] border-b-2 border-dashed border-[var(--color-ember)] align-bottom">&nbsp;</span>
+          <span key={i} aria-label="palabra oculta" className="mx-1 inline-block min-w-[2.5em] border-b-2 border-dashed border-[var(--color-ember)] align-bottom">
+            &nbsp;
+          </span>
         ) : "base" in t ? (
           <ruby key={i}>
             {t.base}
@@ -109,8 +50,6 @@ function ClozeSentence({ tokens }: { tokens: ClozeToken[] }) {
   );
 }
 
-const BLANK_INTERVALS = { again: "", hard: "", good: "", easy: "" };
-
 export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", reviewMode = "normal" }: { cards: ReviewCard[]; autoplay?: boolean; cardAnim?: string; reviewMode?: string }) {
   const router = useRouter();
   const reduce = useReducedMotion();
@@ -120,7 +59,6 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", revie
   const [pending, setPending] = useState(false);
   const [saveError, setSaveError] = useState(false);
   const [done, setDone] = useState(0);
-  const [lastKey, setLastKey] = useState<string | null>(null);
   const startedAt = useRef<number>(Date.now());
   const correctRef = useRef(0);
   const wordAudioRef = useRef<HTMLAudioElement>(null);
@@ -141,9 +79,6 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", revie
     if (revealed) return;
     setRevealed(true);
     playSound("flip");
-    // Play SYNCHRONOUSLY inside the tap — iOS WebKit blocks <audio>.play() that
-    // isn't in the gesture's task, and a setTimeout drops the user-activation, so
-    // a deferred play() is silent on iPhone.
     if (autoplay && card?.audio) playWord();
   }, [revealed, card, playWord, autoplay]);
 
@@ -159,16 +94,12 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", revie
       } catch {
         res = { ok: false };
       }
-      // Only advance once the grade is actually persisted — otherwise the card
-      // would silently leave the session while SRS state stayed untouched.
       if (!res?.ok) {
         setPending(false);
         setSaveError(true);
         return;
       }
-      playSound(GRADE_SND[g - 1]);
-      // "Otra vez" (Again) → re-queue this session, blanking the now-stale
-      // interval preview (it was computed from the pre-lapse FSRS state).
+      playSound((["again", "hard", "good", "easy"] as const)[g - 1]);
       if (g === 1) setQueue((q) => [...q, { ...card, intervals: { ...BLANK_INTERVALS } }]);
       else correctRef.current += 1;
       setDone((d) => d + 1);
@@ -180,10 +111,7 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", revie
     [revealed, pending, card],
   );
 
-  // iOS unlock: WebKit only lets an <audio> element play programmatically once it
-  // has played inside a user gesture. Prime the persistent word-audio element
-  // (muted) on the very first touch so later auto-plays (listen mode, reveal) are
-  // allowed instead of silently blocked. Runs once.
+  // iOS unlock — prime the persistent word-audio element on first touch.
   useEffect(() => {
     const unlock = () => {
       const a = wordAudioRef.current;
@@ -197,18 +125,14 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", revie
     return () => window.removeEventListener("pointerdown", unlock);
   }, []);
 
-  // Listening mode: play the word as each new card appears, so you recall from
-  // sound before seeing it. (Re-plays on reveal via the normal autoplay path.)
-  // The FIRST card is skipped: no in-session gesture has primed the <audio> element
-  // yet, so iOS would silently block this non-gesture auto-play. The user's tap on
-  // the play button plays + unlocks it; every later card then auto-plays fine.
+  // Listening mode — play the word as each new card appears (first card skipped).
   useEffect(() => {
     if (reviewMode !== "listen" || revealed || !card?.audio || idx === 0) return;
     const t = setTimeout(playWord, 220);
     return () => clearTimeout(t);
   }, [idx, reviewMode, revealed, card, playWord]);
 
-  // Keyboard: Space/Enter reveals, 1–4 grade, J replays audio.
+  // Keyboard — Space/Enter reveals, J replays audio. (1–4 live in <GradeButtons/>.)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (finished) return;
@@ -217,31 +141,20 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", revie
       if ((e.key === " " || e.key === "Enter") && !revealed) {
         e.preventDefault();
         reveal();
-      } else if (revealed && ["1", "2", "3", "4"].includes(e.key)) {
-        e.preventDefault();
-        // Mirror a tap: briefly pulse the matching grade cell.
-        setLastKey(e.key);
-        setTimeout(() => setLastKey(null), 150);
-        void grade(Number(e.key));
       } else if (e.key.toLowerCase() === "j" && (revealed || reviewMode === "listen")) {
-        // Only replay once the answer is shown — except listen mode, where the
-        // audio IS the prompt. Otherwise J would speak the answer pre-reveal.
         playWord();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [finished, revealed, reviewMode, reveal, grade, playWord]);
+  }, [finished, revealed, reviewMode, reveal, playWord]);
 
-  // Celebrate once when the session ends.
   const completedRef = useRef(false);
   useEffect(() => {
     if (finished && !completedRef.current) { completedRef.current = true; playSound("complete"); }
   }, [finished]);
 
   if (finished) {
-    // Chain the daily session: word review → kanji handwriting → kana, offering
-    // whatever's still waiting next so it all flows without a dashboard detour.
     const streak = getStreak();
     const newPerDay = Number(getSetting("new_per_day", "10"));
     const kw = kanjiWriteCounts(newPerDay);
@@ -254,39 +167,34 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", revie
         ? { href: `/kana/drill?script=${kc.script}&mode=recognition`, label: `Practicar kana (${kanaReady})` }
         : null;
     return (
-      <motion.div
-        className="fixed inset-0 z-40 grid place-items-center bg-[var(--color-ink)] px-6"
-        initial={reduce ? false : { opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.25, ease: EASE }}
-      >
+      <motion.div className="fixed inset-0 z-40 grid place-items-center bg-[var(--color-ink)] px-6" initial={reduce ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25, ease: EASE }}>
         <div className="flex flex-col items-center gap-5 text-center">
-          <Lantern size={72} intensity={Math.min(1, streak / 30)} />
-          <h1 className="text-2xl font-semibold tracking-tight">¡Sesión completa!</h1>
-          <p className="text-[var(--color-fg-muted)]">
-            {done} {done === 1 ? "repaso" : "repasos"} · {correctRef.current} {correctRef.current === 1 ? "acierto" : "aciertos"}
-          </p>
+          {/* the lantern ignites to its streak intensity */}
+          <motion.div initial={reduce ? false : { scale: 0.85, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 220, damping: 20 }}>
+            <Lantern size={72} intensity={Math.min(1, streak / 30)} milestone={streak === 7 || streak === 30 || streak === 100} />
+          </motion.div>
+          <motion.h1 className="text-2xl font-semibold tracking-tight" initial={reduce ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, ease: EASE }}>
+            ¡Sesión completa!
+          </motion.h1>
+          <motion.div className="flex gap-3" initial={reduce ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18, ease: EASE }}>
+            <div className="surface px-6 py-3">
+              <div className="text-2xl font-semibold leading-none tabular-nums text-[var(--color-fg)]">{done}</div>
+              <div className="mt-1 text-xs text-[var(--color-fg-muted)]">{done === 1 ? "repaso" : "repasos"}</div>
+            </div>
+            <div className="surface px-6 py-3">
+              <div className="text-2xl font-semibold leading-none tabular-nums text-[var(--color-good)]">{correctRef.current}</div>
+              <div className="mt-1 text-xs text-[var(--color-fg-muted)]">{correctRef.current === 1 ? "acierto" : "aciertos"}</div>
+            </div>
+          </motion.div>
           {streak > 0 && <p className="text-sm font-medium text-[var(--color-ember)]">🏮 Racha de {streak} {streak === 1 ? "día" : "días"}</p>}
           {next && <p className="text-sm text-[var(--color-fg-faint)]">Continuará…</p>}
           {next ? (
             <div className="mt-2 flex flex-col items-center gap-3">
-              <button
-                onClick={() => router.push(next.href)}
-                className="rounded-xl bg-gradient-to-r from-[var(--color-akari)] to-[var(--color-ember)] px-5 py-2.5 font-semibold text-[var(--color-ink-deep)] shadow-[var(--akari-glow)] transition-[filter] hover:brightness-105"
-              >
-                {next.label} →
-              </button>
-              <button onClick={() => router.push("/")} className="text-sm text-[var(--color-fg-muted)] transition-colors hover:text-[var(--color-fg)]">
-                Volver al inicio
-              </button>
+              <button onClick={() => router.push(next.href)} className="btn btn-primary">{next.label} →</button>
+              <button onClick={() => router.push("/")} className="text-sm text-[var(--color-fg-muted)] transition-colors hover:text-[var(--color-fg)]">Volver al inicio</button>
             </div>
           ) : (
-            <button
-              onClick={() => router.push("/")}
-              className="mt-2 rounded-xl bg-gradient-to-r from-[var(--color-akari)] to-[var(--color-ember)] px-5 py-2.5 font-semibold text-[var(--color-ink-deep)] shadow-[var(--akari-glow)] transition-[filter] hover:brightness-105"
-            >
-              Volver al inicio
-            </button>
+            <button onClick={() => router.push("/")} className="btn btn-primary mt-2">Volver al inicio</button>
           )}
         </div>
       </motion.div>
@@ -294,17 +202,9 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", revie
   }
 
   const progress = queue.length ? (done / queue.length) * 100 : 0;
-  // Accessible name for the headword image — Japanese only (it lives under
-  // lang="ja"), reading in parens for kanji words. The Spanish meaning is NOT
-  // folded in here (a screen reader would speak it with Japanese phonemes); it's
-  // announced separately by the un-hidden <p> below, in the page's own locale.
   const headLabel = card.reading === card.expression ? card.expression : `${card.expression}（${card.reading}）`;
-
-  // Kana-only words (expression === reading) would otherwise print the same kana
-  // twice on the back — show the pitch contour on the headword and drop the
-  // separate reading line for them; kanji words keep both (they differ).
   const kanaOnly = card.reading === card.expression;
-  // Card back content (reading + meaning + audio), shared by both flip modes.
+
   const Back = (
     <>
       <div role="img" lang="ja" aria-label={headLabel} className="font-jp text-4xl font-medium leading-tight text-[var(--color-fg)] sm:text-5xl">
@@ -312,7 +212,11 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", revie
       </div>
       {(!kanaOnly || card.audio) && (
         <div className="flex items-center gap-3">
-          {!kanaOnly && <span lang="ja" aria-hidden className="font-jp text-xl text-[var(--color-ember)]"><PitchAccent reading={card.reading} accent={card.pitchAccent} pitchReading={card.pitchReading} /></span>}
+          {!kanaOnly && (
+            <span lang="ja" aria-hidden className="font-jp text-xl text-[var(--color-ember)]">
+              <PitchAccent reading={card.reading} accent={card.pitchAccent} pitchReading={card.pitchReading} />
+            </span>
+          )}
           {card.audio && <Speaker src={`/${card.audio}`} label="Pronunciación" />}
         </div>
       )}
@@ -320,8 +224,6 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", revie
     </>
   );
 
-  // Cloze mode: blank the headword inside the first example sentence that really
-  // contains it (≈99% of words do); null → the produce front takes over below.
   const cloze =
     reviewMode === "cloze"
       ? (() => {
@@ -333,69 +235,45 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", revie
         })()
       : null;
 
-  // Card front, by review mode: listen = a play button (train the ear), cloze =
-  // the word blanked inside a real sentence, produce = the meaning to recall the
-  // word from, normal = the word to recall its reading/meaning.
-  const Front = reviewMode === "listen" ? (
-    // Listen mode must NOT show the headword (that defeats training the ear), so
-    // it never falls through to the normal front — even for the rare audio-less
-    // card, which simply shows the prompt with no play button to tap.
-    <>
-      {card.audio && (
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); playWord(); }}
-          aria-label="Reproducir audio"
-          className="mx-auto grid h-20 w-20 place-items-center rounded-full border border-[var(--color-line-strong)] text-[var(--color-ember)] transition-colors hover:border-[var(--color-ember)]"
-        >
-          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5Z" /><path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" /></svg>
-        </button>
-      )}
-      <p className="mt-6 text-sm text-[var(--color-fg-faint)]">Escucha y recuerda · toca para comprobar</p>
-    </>
-  ) : reviewMode === "cloze" && cloze ? (
-    <>
-      <div lang="ja" className="text-pretty text-2xl leading-relaxed text-[var(--color-fg)] sm:text-3xl">
-        <ClozeSentence tokens={cloze.tokens} />
-      </div>
-      {cloze.hint && <p className="mt-4 text-pretty text-base text-[var(--color-fg-muted)]">{cloze.hint}</p>}
-      <p className="mt-6 text-sm text-[var(--color-fg-faint)]">¿Qué palabra falta? · toca para comprobar</p>
-    </>
-  ) : reviewMode === "produce" || reviewMode === "cloze" ? (
-    <>
-      <div className="text-pretty text-2xl font-medium leading-snug text-[var(--color-fg)] sm:text-3xl">{card.meaning}</div>
-      <p className="mt-6 text-sm text-[var(--color-fg-faint)]">¿Cómo se dice en japonés? · toca para comprobar</p>
-    </>
-  ) : (
-    <>
-      <div lang="ja" className="font-jp text-5xl font-medium leading-tight text-[var(--color-fg)] sm:text-6xl">{card.expression}</div>
-      <p className="mt-6 text-sm text-[var(--color-fg-faint)]">Recuérdalo, luego toca para comprobar</p>
-    </>
-  );
+  const Front =
+    reviewMode === "listen" ? (
+      <>
+        {card.audio && (
+          <button type="button" onClick={(e) => { e.stopPropagation(); playWord(); }} aria-label="Reproducir audio" className="mx-auto grid h-20 w-20 place-items-center rounded-full border border-[var(--color-line-strong)] text-[var(--color-ember)] transition-colors hover:border-[var(--color-ember)]">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5Z" /><path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" /></svg>
+          </button>
+        )}
+        <p className="mt-6 text-sm text-[var(--color-fg-faint)]">Escucha y recuerda · toca para comprobar</p>
+      </>
+    ) : reviewMode === "cloze" && cloze ? (
+      <>
+        <div lang="ja" className="text-pretty text-2xl leading-relaxed text-[var(--color-fg)] sm:text-3xl"><ClozeSentence tokens={cloze.tokens} /></div>
+        {cloze.hint && <p className="mt-4 text-pretty text-base text-[var(--color-fg-muted)]">{cloze.hint}</p>}
+        <p className="mt-6 text-sm text-[var(--color-fg-faint)]">¿Qué palabra falta? · toca para comprobar</p>
+      </>
+    ) : reviewMode === "produce" || reviewMode === "cloze" ? (
+      <>
+        <div className="text-pretty text-2xl font-medium leading-snug text-[var(--color-fg)] sm:text-3xl">{card.meaning}</div>
+        <p className="mt-6 text-sm text-[var(--color-fg-faint)]">¿Cómo se dice en japonés? · toca para comprobar</p>
+      </>
+    ) : (
+      <>
+        <div lang="ja" className="font-jp text-5xl font-medium leading-tight text-[var(--color-fg)] sm:text-6xl">{card.expression}</div>
+        <p className="mt-6 text-sm text-[var(--color-fg-faint)]">Recuérdalo, luego toca para comprobar</p>
+      </>
+    );
 
   return (
-    <motion.div
-      className="fixed inset-0 z-40 flex flex-col bg-[var(--color-ink)]"
-      initial={reduce ? false : { opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.22, ease: EASE }}
-    >
+    <motion.div className="fixed inset-0 z-40 flex flex-col bg-[var(--color-ink)]" initial={reduce ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.22, ease: EASE }}>
       {/* top bar */}
       <header className="flex items-center gap-3 px-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
         <button onClick={() => router.push("/")} aria-label="Salir de la sesión" className="grid h-11 w-11 place-items-center rounded-lg text-[var(--color-fg-muted)] transition-colors hover:text-[var(--color-fg)]">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="m6 6 12 12M18 6 6 18" /></svg>
         </button>
         <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--color-surface-2)]">
-          <motion.div
-            className="h-full rounded-full bg-gradient-to-r from-[var(--color-ember)] to-[var(--color-akari)]"
-            initial={false}
-            animate={{ width: `${progress}%` }}
-            transition={{ duration: reduce ? 0 : 0.3, ease: EASE }}
-          />
+          <motion.div className="h-full rounded-full bg-gradient-to-r from-[var(--color-ember)] to-[var(--color-akari)]" initial={false} animate={{ width: `${progress}%` }} transition={{ duration: reduce ? 0 : 0.3, ease: EASE }} />
         </div>
-        <span className="text-xs tabular-nums text-[var(--color-fg-faint)]">
-          {done}/{queue.length}
-        </span>
+        <span className="text-xs tabular-nums text-[var(--color-fg-faint)]">{done}/{queue.length}</span>
       </header>
 
       {/* card area */}
@@ -406,53 +284,27 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", revie
             onKeyDown={!revealed ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); reveal(); } } : undefined}
             role={!revealed ? "button" : undefined}
             tabIndex={!revealed ? 0 : undefined}
-            className={`surface ambient-lantern relative block w-full overflow-hidden px-6 py-10 text-center [perspective:1200px] ${!revealed ? "cursor-pointer" : ""}`}
+            className={`surface ambient-lantern relative block w-full overflow-hidden px-6 py-10 text-center [perspective:1200px] transition-shadow duration-[var(--motion-slow)] ${!revealed ? "cursor-pointer" : ""}`}
             style={revealed ? { boxShadow: "var(--akari-glow)" } : undefined}
           >
             {card.isNew && (
-              <span className="absolute left-4 top-4 rounded-full bg-[color-mix(in_oklab,var(--color-ember)_22%,transparent)] px-2 py-0.5 text-[11px] font-medium text-[var(--color-ember)]">
+              <span className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-[color-mix(in_oklab,var(--color-ember)_15%,transparent)] px-2 py-0.5 text-[11px] font-medium text-[var(--color-ember)]">
+                <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-[var(--color-ember)] shadow-[0_0_8px_var(--color-ember)]" />
                 nueva
               </span>
             )}
 
             {isFlip ? (
-              // True 3D flip: one persistent preserve-3d wrapper with two
-              // backface-hidden faces rotating together.
-              <motion.div
-                className="relative grid min-h-[210px] [transform-style:preserve-3d]"
-                initial={false}
-                animate={{ rotateY: revealed ? 180 : 0 }}
-                transition={{ duration: 0.5, ease: EASE }}
-              >
-                <div className="col-start-1 row-start-1 grid place-items-center [backface-visibility:hidden]" aria-hidden={revealed}>
-                  <div>{Front}</div>
-                </div>
-                <div className="col-start-1 row-start-1 flex flex-col items-center justify-center gap-3 [backface-visibility:hidden] [transform:rotateY(180deg)]" aria-hidden={!revealed}>
-                  {Back}
-                </div>
+              <motion.div className="relative grid min-h-[210px] [transform-style:preserve-3d]" initial={false} animate={{ rotateY: revealed ? 180 : 0 }} transition={{ duration: 0.5, ease: EASE }}>
+                <div className="col-start-1 row-start-1 grid place-items-center [backface-visibility:hidden]" aria-hidden={revealed}><div>{Front}</div></div>
+                <div className="col-start-1 row-start-1 flex flex-col items-center justify-center gap-3 [backface-visibility:hidden] [transform:rotateY(180deg)]" aria-hidden={!revealed}>{Back}</div>
               </motion.div>
             ) : (
               <AnimatePresence mode="wait" initial={false}>
                 {!revealed ? (
-                  <motion.div
-                    key="front"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1, rotateY: 0 }}
-                    exit={reduce ? { opacity: 0 } : { opacity: 0, rotateY: -8 }}
-                    transition={{ duration: reduce ? 0.05 : 0.18, ease: EASE }}
-                  >
-                    {Front}
-                  </motion.div>
+                  <motion.div key="front" initial={{ opacity: 0 }} animate={{ opacity: 1, rotateY: 0 }} exit={reduce ? { opacity: 0 } : { opacity: 0, rotateY: -8 }} transition={{ duration: reduce ? 0.05 : 0.18, ease: EASE }}>{Front}</motion.div>
                 ) : (
-                  <motion.div
-                    key="back"
-                    initial={reduce ? { opacity: 0 } : { opacity: 0, rotateY: 8 }}
-                    animate={{ opacity: 1, rotateY: 0 }}
-                    transition={{ duration: reduce ? 0.05 : 0.22, ease: EASE }}
-                    className="flex flex-col items-center gap-3"
-                  >
-                    {Back}
-                  </motion.div>
+                  <motion.div key="back" initial={reduce ? { opacity: 0 } : { opacity: 0, rotateY: 8 }} animate={{ opacity: 1, rotateY: 0 }} transition={{ duration: reduce ? 0.05 : 0.22, ease: EASE }} className="flex flex-col items-center gap-3">{Back}</motion.div>
                 )}
               </AnimatePresence>
             )}
@@ -461,12 +313,7 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", revie
           {/* extras after reveal */}
           <AnimatePresence>
             {revealed && (
-              <motion.div
-                initial={reduce ? { opacity: 0 } : { opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.28, ease: EASE, delay: 0.06 }}
-                className="flex flex-col gap-3"
-              >
+              <motion.div initial={reduce ? { opacity: 0 } : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, ease: EASE, delay: 0.06 }} className="flex flex-col gap-3">
                 <div className="flex justify-center">
                   <Explain context={{ expression: card.expression, reading: card.reading, meaning: card.meaning, sentence: card.sentences[0]?.jp }} />
                 </div>
@@ -501,41 +348,15 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", revie
       {/* actions (thumb zone) */}
       <footer className="px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
         <div className="mx-auto w-full max-w-xl">
-          {saveError && (
-            <p role="alert" className="mb-2 text-center text-sm text-[var(--color-again)]">
-              No se pudo guardar tu repaso. Inténtalo de nuevo.
-            </p>
-          )}
+          {saveError && <p role="alert" className="mb-2 text-center text-sm text-[var(--color-again)]">No se pudo guardar tu repaso. Inténtalo de nuevo.</p>}
           {!revealed ? (
-            <button
-              onClick={reveal}
-              className="w-full rounded-xl border border-[var(--color-line-strong)] bg-[var(--color-surface-2)] py-3.5 font-medium text-[var(--color-fg)] transition-colors hover:border-[var(--color-indigo)]"
-            >
+            <button onClick={reveal} className="showbtn w-full rounded-xl border border-[var(--color-line-strong)] bg-[var(--color-surface-2)] py-3.5 font-medium text-[var(--color-fg)] transition-[border-color,box-shadow] hover:border-[var(--color-ember)]">
               Mostrar respuesta
             </button>
           ) : (
             <>
-              <p className="mb-2 text-center text-xs text-[var(--color-fg-faint)]">
-                ¿Qué tal lo recordaste? · el tiempo = cuándo vuelve
-              </p>
-              <div className="grid grid-cols-4 gap-2">
-              {GRADES.map((b) => (
-                <motion.button
-                  key={b.g}
-                  disabled={pending}
-                  onClick={() => grade(b.g)}
-                  animate={lastKey === b.key ? { scale: 0.94 } : { scale: 1 }}
-                  whileTap={{ scale: 0.97 }}
-                  transition={{ duration: 0.12, ease: EASE }}
-                  className="relative flex flex-col items-center gap-0.5 rounded-xl border py-2.5 transition-[background-color] duration-[var(--motion-fast)] hover:bg-[color-mix(in_oklab,var(--btn)_14%,transparent)] disabled:opacity-50"
-                  style={{ borderColor: "color-mix(in oklab, var(--btn) 45%, transparent)", ["--btn" as string]: b.color }}
-                >
-                  <span className="absolute right-1.5 top-1 hidden rounded border border-[var(--color-line)] px-1 text-[10px] text-[var(--color-fg-faint)] sm:block">{b.key}</span>
-                  <span className="text-sm font-medium" style={{ color: b.color }}>{b.label}</span>
-                  <span className="text-[11px] tabular-nums text-[var(--color-fg-faint)]">{card.intervals[["again", "hard", "good", "easy"][b.g - 1] as keyof ReviewCard["intervals"]]}</span>
-                </motion.button>
-              ))}
-              </div>
+              <p className="mb-2 text-center text-xs text-[var(--color-fg-faint)]">¿Qué tal lo recordaste? · el tiempo = <b className="font-semibold text-[var(--color-ember)]">cuándo vuelve</b></p>
+              <GradeButtons intervals={card.intervals} onGrade={(g) => grade(g)} disabled={pending} />
             </>
           )}
         </div>
