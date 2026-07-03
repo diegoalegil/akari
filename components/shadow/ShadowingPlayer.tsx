@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ShadowingItem } from "@/lib/shadowing";
 import { Furigana } from "@/components/Furigana";
 import { PitchAccent } from "@/components/PitchAccent";
+import { assetUrl } from "@/lib/basePath";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 const MIN_GAP = 1200; // floor on the "your turn" pause, even for very short words
@@ -197,7 +198,7 @@ export function ShadowingPlayer({ items }: { items: ShadowingItem[] }) {
         </button>
       </footer>
 
-      <audio ref={audioRef} src={`/${item.audio}`} preload="auto" onEnded={onEnded} onError={onAudioError} />
+      <audio ref={audioRef} src={assetUrl(item.audio)} preload="auto" onEnded={onEnded} onError={onAudioError} />
     </motion.div>
   );
 }

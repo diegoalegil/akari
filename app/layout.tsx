@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AppChrome } from "@/components/AppChrome";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
+import { BASE_PATH } from "@/lib/basePath";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 
@@ -26,11 +27,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap"
           rel="stylesheet"
         />
-        <link rel="manifest" href="/manifest.webmanifest" />
+        <link rel="manifest" href={`${BASE_PATH}/manifest.webmanifest`} />
         {/* iOS "Add to Home Screen" needs a raster PNG; SVG is ignored there. */}
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-        <link rel="icon" href="/icon.svg" type="image/svg+xml" />
-        <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192" />
+        <link rel="apple-touch-icon" href={`${BASE_PATH}/apple-touch-icon.png`} />
+        <link rel="icon" href={`${BASE_PATH}/icon.svg`} type="image/svg+xml" />
+        <link rel="icon" href={`${BASE_PATH}/icon-192.png`} type="image/png" sizes="192x192" />
       </head>
       <body>
         <ServiceWorkerRegister />

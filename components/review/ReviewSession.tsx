@@ -15,6 +15,7 @@ import { kanjiWriteCounts } from "@/lib/kanjiDrill";
 import { kanaCounts } from "@/lib/kana";
 import { getSetting, getStreak } from "@/lib/queries";
 import { playSound } from "@/lib/sound";
+import { assetUrl } from "@/lib/basePath";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 const BLANK_INTERVALS = { again: "", hard: "", good: "", easy: "" };
@@ -217,7 +218,7 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", revie
               <PitchAccent reading={card.reading} accent={card.pitchAccent} pitchReading={card.pitchReading} />
             </span>
           )}
-          {card.audio && <Speaker src={`/${card.audio}`} label="Pronunciación" />}
+          {card.audio && <Speaker src={assetUrl(card.audio)} label="Pronunciación" />}
         </div>
       )}
       <p className="max-w-md text-pretty text-lg text-[var(--color-fg)]">{card.meaning}</p>
@@ -321,7 +322,7 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", revie
                   <div key={i} className="surface p-4">
                     <div className="flex items-start justify-between gap-3">
                       <p lang="ja" className="font-jp text-lg leading-relaxed text-[var(--color-fg)]"><Furigana text={s.furigana} fallback={s.jp} /></p>
-                      {s.audio && <Speaker src={`/${s.audio}`} label="Audio de la frase" />}
+                      {s.audio && <Speaker src={assetUrl(s.audio)} label="Audio de la frase" />}
                     </div>
                     {s.en && <p className="mt-1 text-sm text-[var(--color-fg-muted)]">{s.en}</p>}
                   </div>
@@ -343,7 +344,7 @@ export function ReviewSession({ cards, autoplay = true, cardAnim = "turn", revie
       </main>
 
       {/* hidden word-audio element for autoplay / J key */}
-      {card.audio && <audio ref={wordAudioRef} src={`/${card.audio}`} preload="auto" />}
+      {card.audio && <audio ref={wordAudioRef} src={assetUrl(card.audio)} preload="auto" />}
 
       {/* actions (thumb zone) */}
       <footer className="px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">

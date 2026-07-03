@@ -7,6 +7,7 @@ import { PitchAccent } from "@/components/PitchAccent";
 import { splitMorae, pitchName } from "@/lib/pitch";
 import { Lantern } from "@/components/Lantern";
 import { playSound } from "@/lib/sound";
+import { assetUrl } from "@/lib/basePath";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -120,7 +121,7 @@ export function PitchDrill({ items }: { items: PitchDrillItem[] }) {
           </AnimatePresence>
         </div>
       </footer>
-      {item.audio && <audio ref={audioRef} src={`/${item.audio}`} preload="none" />}
+      {item.audio && <audio ref={audioRef} src={assetUrl(item.audio)} preload="none" />}
     </motion.div>
   );
 }

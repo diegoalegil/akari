@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { BASE_PATH } from "@/lib/basePath";
 
 export function ServiceWorkerRegister() {
   useEffect(() => {
@@ -8,7 +9,7 @@ export function ServiceWorkerRegister() {
       "serviceWorker" in navigator &&
       process.env.NODE_ENV === "production"
     ) {
-      navigator.serviceWorker.register("/sw.js").catch(() => {});
+      navigator.serviceWorker.register(`${BASE_PATH}/sw.js`).catch(() => {});
     }
   }, []);
 

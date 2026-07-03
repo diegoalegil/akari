@@ -11,6 +11,7 @@
 // is re-exported only on seed, content upgrade, or an explicit flush. On load
 // the overlay is folded back over the full checkpoint — see loadClientDb.
 import initSqlJs, { type Database as SqlJsDatabase, type Statement as SqlJsStatement } from "sql.js";
+import { BASE_PATH } from "./basePath";
 
 const IDB_NAME = "akari-db";
 const IDB_STORE = "kv";
@@ -356,7 +357,7 @@ async function fetchSeedBytes(): Promise<Uint8Array> {
   if (typeof DecompressionStream === "undefined") throw new Error(UNSUPPORTED_BROWSER);
   // The ?v= busts a stale service-worker cache so an upgrade always pulls THIS
   // deploy's seed (static hosts ignore the query string and serve the file).
-  const res = await fetch(`/akari.db.gz?v=${SEED_VERSION}`);
+  const res = await fetch(`${BASE_PATH}/akari.db.gz?v=${SEED_VERSION}`);
   if (!res.ok || !res.body) throw new Error("could not fetch seed DB");
   const stream = res.body.pipeThrough(new DecompressionStream("gzip"));
   return new Uint8Array(await new Response(stream).arrayBuffer());
@@ -543,7 +544,7 @@ export async function loadClientDb(): Promise<ClientDb> {
     // returning load. The two IDB reads keep .catch(()=>null) (never reject); only a
     // wasm failure rejects Promise.all, into the same outer .catch as before.
     const [SQL, full, overlay] = await Promise.all([
-      initSqlJs({ locateFile: () => "/sql-wasm.wasm" }),
+      initSqlJs({ locateFile: () => `${BASE_PATH}/sql-wasm.wasm` }),
       idbGetFull().catch(() => null),
       idbGetOverlay().catch(() => null),
     ]);

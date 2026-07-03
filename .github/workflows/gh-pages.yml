@@ -1,0 +1,59 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Same pipeline the Cloudflare Workers deploy already runs: download the
+      # raw datasets (JMDict, KanjiDic, KanjiVG, Kaishi, Tatoeba audio — none of
+      # this is versioned, see .gitignore), seed the local SQLite DB, then export
+      # the static PWA. GITHUB_TOKEN is provided automatically by Actions and
+      # lifts scripts/download.ts past the unauthenticated GitHub API rate limit.
+      - run: npm run seed
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # This repo isn't <user>.github.io, so Pages serves it from /akari/, not
+      # domain root — see next.config.ts / lib/basePath.ts for the code side.
+      - run: npm run build:static
+        env:
+          NEXT_PUBLIC_BASE_PATH: /akari
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./out
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deployment

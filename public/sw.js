@@ -12,32 +12,38 @@ const CACHE = "akari-__BUILD_ID__";
 // played and break offline audio until each is re-downloaded.
 const AUDIO_CACHE = "akari-audio";
 
+// Derived from the SW's own registration scope (its directory), not hardcoded —
+// GitHub Pages serves this app under /akari/, everywhere else it's "/". This
+// keeps the worker correct wherever it's deployed with zero build-time coupling.
+const BASE = new URL(self.registration.scope).pathname;
+
 const PRECACHE_URLS = [
-  "/",
+  BASE,
   // Top-level routes, so an offline cold-load / deep-link / refresh of a route the
   // user never opened online still boots that page (not the home shell). The 837
   // dynamic /kanji/<literal> pages are intentionally left to network-first caching.
-  "/review",
-  "/review/leeches",
-  "/kana",
-  "/kana/drill",
-  "/kana/speed",
-  "/kanji",
-  "/kanji/write",
-  "/pitch/drill",
-  "/shadow",
-  "/search",
-  "/stats",
-  "/settings",
-  "/attributions",
-  "/akari.db.gz",
-  "/sql-wasm.wasm",
-  "/manifest.webmanifest",
-  "/icon.svg",
-  "/apple-touch-icon.png",
-  "/icon-192.png",
-  "/icon-512.png",
-  "/icon-512-maskable.png",
+  // trailingSlash:true means each route exports as a directory (route/index.html).
+  BASE + "review/",
+  BASE + "review/leeches/",
+  BASE + "kana/",
+  BASE + "kana/drill/",
+  BASE + "kana/speed/",
+  BASE + "kanji/",
+  BASE + "kanji/write/",
+  BASE + "pitch/drill/",
+  BASE + "shadow/",
+  BASE + "search/",
+  BASE + "stats/",
+  BASE + "settings/",
+  BASE + "attributions/",
+  BASE + "akari.db.gz",
+  BASE + "sql-wasm.wasm",
+  BASE + "manifest.webmanifest",
+  BASE + "icon.svg",
+  BASE + "apple-touch-icon.png",
+  BASE + "icon-192.png",
+  BASE + "icon-512.png",
+  BASE + "icon-512-maskable.png",
   // __NEXT_ASSETS__ (replaced at build with the hashed _next/static chunks)
 ];
 
@@ -109,7 +115,7 @@ self.addEventListener("fetch", (event) => {
           const cache = await caches.open(CACHE);
           const cached = await cache.match(request);
           if (cached) return cached;
-          const shell = await cache.match("/");
+          const shell = await cache.match(BASE);
           if (shell) return shell;
           return Response.error();
         }
@@ -123,11 +129,11 @@ self.addEventListener("fetch", (event) => {
   // goes to the deploy-surviving AUDIO_CACHE; everything else to the build CACHE.
   event.respondWith(
     (async () => {
-      const cache = await caches.open(url.pathname.startsWith("/audio/") ? AUDIO_CACHE : CACHE);
+      const cache = await caches.open(url.pathname.includes("/audio/") ? AUDIO_CACHE : CACHE);
       // The seed DB is fetched with a ?v= cache-buster; match the query-less
       // precached entry so it's available offline on the very first load.
       const cached =
-        url.pathname === "/akari.db.gz"
+        url.pathname.endsWith("/akari.db.gz")
           ? await cache.match(request, { ignoreSearch: true })
           : await cache.match(request);
       if (cached) return cached;

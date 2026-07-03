@@ -30,12 +30,17 @@ try {
   process.exit(1);
 }
 
+// Same basePath the Next build itself was invoked with (see next.config.ts) —
+// GitHub Pages serves this app under /akari/, so the precached asset URLs must
+// carry that prefix too, or the SW would cache paths the host never serves.
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+
 // Every build asset except sourcemaps, as absolute same-origin URLs.
 let assets: string[] = [];
 try {
   assets = walk(staticDir)
     .filter((p) => !p.endsWith(".map"))
-    .map((p) => "/_next/static/" + relative(staticDir, p).split(/[\\/]/).join("/"))
+    .map((p) => basePath + "/_next/static/" + relative(staticDir, p).split(/[\\/]/).join("/"))
     .sort();
 } catch (e) {
   console.warn("postbuild-sw: no _next/static dir — precaching base assets only", e);

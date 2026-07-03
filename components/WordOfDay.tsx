@@ -5,6 +5,7 @@ import { Furigana } from "@/components/Furigana";
 import { PitchAccent } from "@/components/PitchAccent";
 import { Speaker } from "@/components/Speaker";
 import { Eyebrow } from "@/components/Eyebrow";
+import { assetUrl } from "@/lib/basePath";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -53,7 +54,7 @@ export function WordOfDay({ word }: { word: WordOfDayData }) {
             <PitchAccent reading={word.reading} accent={word.pitchAccent} pitchReading={word.pitchReading} />
           </motion.div>
         </div>
-        {word.audio && <Speaker src={`/${word.audio}`} label="Pronunciación" />}
+        {word.audio && <Speaker src={assetUrl(word.audio)} label="Pronunciación" />}
       </div>
 
       <motion.p className="mt-2 text-pretty text-[var(--color-fg)]" {...rise(0.26)}>
@@ -66,7 +67,7 @@ export function WordOfDay({ word }: { word: WordOfDayData }) {
             <p lang="ja" className="min-w-0 font-jp leading-relaxed text-[var(--color-fg-muted)]">
               <Furigana text={word.sentence.furigana} fallback={word.sentence.jp} />
             </p>
-            {word.sentence.audio && <Speaker src={`/${word.sentence.audio}`} label="Audio de la frase" />}
+            {word.sentence.audio && <Speaker src={assetUrl(word.sentence.audio)} label="Audio de la frase" />}
           </div>
           {word.sentence.es && <p className="mt-1 text-sm text-[var(--color-fg-faint)]">{word.sentence.es}</p>}
         </div>
